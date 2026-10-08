@@ -1,0 +1,1907 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>EinsNet · Control Total de Red LAN</title>
+  <meta name="description" content="Monitoreo, diagnóstico y control total de red LAN — ping, traceroute, port scan, mapa interactivo, telemetría y alertas."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="icon" type="image/x-icon" href="netguard.ico"/>
+  <link rel="manifest" href="manifest.json"/>
+  <meta name="theme-color" content="#00f5ff"/>
+  <link rel="stylesheet" href="style.css?v=5.6"/>
+</head>
+<body>
+
+<!-- ═══════════════ HEADER ═══════════════ -->
+<header id="app-header">
+  <div class="header-brand">
+    <div class="brand-icon">
+      <svg viewBox="0 0 40 40" fill="none">
+        <circle cx="20" cy="20" r="19" stroke="url(#hg)" stroke-width="2"/>
+        <circle cx="20" cy="20" r="5" fill="#00f5ff"/>
+        <line x1="20" y1="1" x2="20" y2="15" stroke="#00f5ff" stroke-width="1.5"/>
+        <line x1="20" y1="25" x2="20" y2="39" stroke="#00f5ff" stroke-width="1.5"/>
+        <line x1="1" y1="20" x2="15" y2="20" stroke="#7c3aed" stroke-width="1.5"/>
+        <line x1="25" y1="20" x2="39" y2="20" stroke="#7c3aed" stroke-width="1.5"/>
+        <line x1="8" y1="8" x2="15" y2="15" stroke="#00f5ff" stroke-width="1" opacity=".5"/>
+        <line x1="25" y1="25" x2="32" y2="32" stroke="#00f5ff" stroke-width="1" opacity=".5"/>
+        <line x1="32" y1="8" x2="25" y2="15" stroke="#7c3aed" stroke-width="1" opacity=".5"/>
+        <line x1="15" y1="25" x2="8" y2="32" stroke="#7c3aed" stroke-width="1" opacity=".5"/>
+        <defs>
+          <linearGradient id="hg" x1="0" y1="0" x2="40" y2="40">
+            <stop offset="0%" stop-color="#00f5ff"/>
+            <stop offset="100%" stop-color="#7c3aed"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+    <div>
+      <h1 id="brand-title">EinsNet</h1>
+      <span class="brand-sub">Control Total de Red · 192.168.80.x</span>
+    </div>
+  </div>
+
+  <div class="header-stats">
+    <div class="hstat"><span class="hstat-dot st-online"></span><span class="hstat-val" id="hv-active">18</span><span class="hstat-label">Activos</span></div>
+    <div class="hstat"><span class="hstat-dot st-offline"></span><span class="hstat-val" id="hv-inactive">8</span><span class="hstat-label">Inactivos</span></div>
+    <div class="hstat"><span class="hstat-dot st-danger pulse-red"></span><span class="hstat-val" id="hv-alerts">0</span><span class="hstat-label">Alertas</span></div>
+    <div class="hstat"><span class="hstat-dot" style="background:#f59e0b"></span><span class="hstat-val" id="hv-bw">0</span><span class="hstat-label">MB/s Total</span></div>
+    <div class="hstat"><span class="hstat-dot" style="background:#a78bfa"></span><span class="hstat-val" id="hv-latency">0</span><span class="hstat-label">ms Avg</span></div>
+    <div class="hstat hstat-clickable" id="hstat-blocked" title="Ver lista de dispositivos bloqueados en Cuarentena">
+      <span class="hstat-dot" style="background:#ef4444"></span>
+      <span class="hstat-val" id="hv-blocked">0</span>
+      <span class="hstat-label">Bloqueados</span>
+    </div>
+  </div>
+
+  <div class="header-actions">
+    <div class="sede-pill" id="sede-pill" title="Clic para alternar sede o ver Enlace Inter-Sedes (Lynch ↔ Levarte)" style="display:inline-flex;align-items:center;gap:6px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);border-radius:12px;padding:4px 10px;font-size:11.5px;color:#34d399;font-weight:700;cursor:pointer;"><span style="color:#10b981;">📍</span> <strong>Sede Levarte</strong> <span style="font-size:10px;color:#94a3b8;">· 🟢 Enlazado Lynch</span></div>
+    <button class="btn-sm" id="btn-subyugadas-header" title="Ver Mapeo y Redes Subyugadas al Router Principal FortiGate (192.168.1.99)" style="border-color:#38bdf8;color:#38bdf8;display:inline-flex;align-items:center;gap:5px;font-weight:700;">🌐 Redes Subyugadas</button>
+    <div class="scan-status" id="scan-status"><span class="pulse-green-dot"></span> Red activa</div>
+    <button class="btn-emergency pulse-emergency" id="btn-emergency-broadcast" title="Emitir mensaje de emergencia y evacuación a toda la red">🚨 Evacuación</button>
+    <a href="/alerta" target="_blank" class="btn-app-install" id="btn-intercom-portal" title="Abrir Intercomunicador y Buzón de Mensajes" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px;">💬 Chat LAN <span id="inbox-count" style="background:#10b981;color:#050b18;font-size:10px;padding:1px 5px;border-radius:10px;font-weight:700;">1</span></a>
+    <button class="btn-app-install" id="btn-app-install" title="Acceso directo de Escritorio e Instalación">&#x1F5B5; App</button>
+    <button class="btn-scan" id="btn-scan" title="Escanear la red local ahora">&#x21BB; Scan</button>
+    <button class="btn-term" id="btn-terminal" title="Abrir Consola y Terminal de Red EinsNet">&#x25A0; Terminal</button>
+    <div class="clock" id="clock"></div>
+  </div>
+</header>
+
+<!-- ═══════════════ MAIN ═══════════════ -->
+<main id="app-main">
+
+  <!-- SIDEBAR -->
+  <aside id="sidebar">
+    <nav class="sidenav">
+      <div class="nav-section-label">MONITOREO</div>
+      <button class="nav-item active" data-view="map">
+        <span class="nav-icon">&#x2B21;</span> Mapa de Red
+      </button>
+      <button class="nav-item" data-view="plano-lynch" id="nav-plano-lynch">
+        <span class="nav-icon">📐</span> Plano Arquitectónico Lynch (1:200)
+        <span class="nav-badge" style="background:#38bdf8;color:#050b18;font-weight:700;">DWG</span>
+      </button>
+      <button class="nav-item" data-view="bridge" id="nav-bridge">
+        <span class="nav-icon">🌉</span> Enlace Inter-Sedes
+        <span class="nav-badge" style="background:#8b5cf6;color:#ffffff;font-weight:700;" id="bridge-badge">ENLACE</span>
+      </button>
+      <button class="nav-item" data-view="soc">
+        <span class="nav-icon">&#x1F6E1;</span> SOC Dashboard
+        <span class="nav-badge nav-badge-soc" id="soc-badge">LIVE</span>
+      </button>
+      <button class="nav-item" data-view="devices">
+        <span class="nav-icon">&#x229F;</span> Dispositivos
+      </button>
+      <button class="nav-item" data-view="traffic">
+        <span class="nav-icon">&#x2195;</span> Trafico
+      </button>
+      <button class="nav-item" data-view="web-audit">
+        <span class="nav-icon">&#x1F310;</span> Historial Web Escolar
+        <span class="nav-badge" style="background:#10b981;color:#050b18;font-weight:700;">DNS</span>
+      </button>
+      <div class="nav-section-label">SEGURIDAD</div>
+      <button class="nav-item" data-view="vulns">
+        <span class="nav-icon">&#x26A1;</span> Vulnerabilidades
+        <span class="nav-badge nav-badge-vuln" id="vuln-badge">CVE</span>
+      </button>
+      <button class="nav-item" data-view="alerts">
+        <span class="nav-icon">&#x26A0;</span> Alertas
+        <span class="nav-badge" id="nav-badge">0</span>
+      </button>
+      <div class="nav-section-label">HERRAMIENTAS</div>
+      <button class="nav-item" data-view="tools">
+        <span class="nav-icon">&#x2692;</span> Herramientas
+      </button>
+      <button class="nav-item" data-view="scanner-pro">
+        <span class="nav-icon">&#x1F4E1;</span> Escáner Multi-Red
+      </button>
+      <button class="nav-item" data-view="connections">
+        <span class="nav-icon">&#x21CC;</span> Conexiones
+      </button>
+      <button class="nav-item" data-view="control">
+        <span class="nav-icon">&#x2699;</span> Control
+      </button>
+    </nav>
+
+    <div class="sidebar-filter">
+      <h3>Mostrar en mapa</h3>
+      <label class="filter-check"><input type="checkbox" checked id="f-router"> <span class="fc-dot" style="background:#f59e0b"></span> Routers/SW</label>
+      <label class="filter-check"><input type="checkbox" checked id="f-pc"> <span class="fc-dot" style="background:#00f5ff"></span> PCs</label>
+      <label class="filter-check"><input type="checkbox" checked id="f-printer"> <span class="fc-dot" style="background:#a78bfa"></span> Impresoras</label>
+      <label class="filter-check"><input type="checkbox" checked id="f-unknown"> <span class="fc-dot" style="background:#6b7280"></span> Desconocidos</label>
+      <label class="filter-check"><input type="checkbox" checked id="f-show-labels"> <span class="fc-dot" style="background:#64748b"></span> Etiquetas</label>
+      <label class="filter-check"><input type="checkbox" checked id="f-show-packets"> <span class="fc-dot" style="background:#00f5ff"></span> Paquetes</label>
+    </div>
+
+    <div class="sidebar-filter" style="position:relative;">
+      <h3>Buscar dispositivo</h3>
+      <div style="position:relative;display:flex;align-items:center;">
+        <input type="text" id="search-device" placeholder="IP, nombre, MAC, área..." class="search-input" autocomplete="off" style="width:100%;padding-right:26px;"/>
+        <button id="search-device-clear" style="position:absolute;right:8px;background:none;border:none;color:#64748b;cursor:pointer;font-size:13px;display:none;line-height:1;padding:2px;" title="Limpiar búsqueda">✕</button>
+      </div>
+      <div id="search-results-dropdown" class="search-results-dropdown" style="display:none;"></div>
+    </div>
+
+    <div class="threat-level-box">
+      <h3>Nivel de Amenaza Global</h3>
+      <div class="threat-gauge"><div class="threat-bar" id="threat-bar"></div></div>
+      <div class="threat-label" id="threat-label">BAJO</div>
+    </div>
+
+    <div class="sidebar-filter" style="margin-top:auto">
+      <h3>Modo mapa</h3>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="map-mode-btn active" id="mm-drag" title="Arrastrar nodos">&#x2725; Drag</button>
+        <button class="map-mode-btn" id="mm-pan" title="Mover mapa">&#x21C6; Pan</button>
+        <button class="map-mode-btn" id="mm-select" title="Seleccionar">&#x25A1; Select</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- CONTENT -->
+  <section id="content">
+
+    <!-- ══ VIEW: MAPA ══ -->
+    <div class="view active" id="view-map">
+      <div class="view-header" style="flex-wrap:wrap;gap:12px;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <h2>Topologia de Red</h2>
+
+          <!-- Selector de Sede del Mapa: Solo Levarte / Solo Lynch / Ambos Mapas al mismo tiempo -->
+          <div class="map-mode-segmented" id="map-sede-tabs" style="border-color:rgba(56,189,248,0.35)">
+            <button class="seg-btn active" id="btn-map-sede-levarte" data-sede-mode="levarte" title="Visualizar únicamente la topología y equipos de Sede Levarte (1° y 2° Medio · Módulo A-15)">
+              📍 Solo Levarte
+            </button>
+            <button class="seg-btn" id="btn-map-sede-lynch" data-sede-mode="lynch" title="Visualizar únicamente la topología y equipos de Sede Patricio Lynch (3° y 4° Medio)">
+              🏫 Solo Lynch
+            </button>
+            <button class="seg-btn" id="btn-map-sede-both" data-sede-mode="both" title="Visualizar ambas sedes al mismo tiempo con el túnel WAN inter-sedes (Vista Dual Bisede)" style="color:#c084fc;font-weight:700;">
+              🌐 Ambos Mapas (Dual)
+            </button>
+          </div>
+          
+          <!-- Modo de Visualización (Tiempo Real / Conceptual / Plano) -->
+          <div class="map-mode-segmented">
+            <button class="seg-btn active" id="btn-seg-live" title="Ver solo los equipos que están conectados físicamente y respondiendo ahora mismo en la LAN">
+              <span class="pulse-green-dot"></span> En Vivo
+              <span class="seg-badge" id="seg-live-count">Detectando...</span>
+            </button>
+            <button class="seg-btn" id="btn-seg-conceptual" title="Ver la infraestructura completa del colegio (incluyendo salas y equipos apagados)">
+              <span id="btn-seg-conceptual-label">🌐 Mapa Conceptual</span>
+              <span class="seg-badge" id="seg-total-count" style="background:rgba(56,189,248,0.18);color:#38bdf8;">-- Nodos</span>
+            </button>
+            <button class="seg-btn" id="btn-seg-plano-cad" title="Ver el plano arquitectónico escala 1:200 con la ubicación física real de cada máquina por piso">
+              📐 Plano Arquitectónico
+            </button>
+          </div>
+
+          <button class="btn-sm" id="btn-ranking-modal" style="border-color:#f59e0b;color:#f59e0b;display:flex;align-items:center;gap:6px;font-weight:600;" title="Ver quién consume más internet y trabaja más en la red escolar">
+            📊 <span>Ranking de Consumo</span>
+          </button>
+        </div>
+        <div class="view-controls">
+          <button class="btn-sm" id="btn-add-host" title="Añadir manualmente una IP o host a la red" style="border-color:var(--green);color:var(--green)">➕ Añadir Host</button>
+          <button class="btn-sm" id="btn-expand-all" title="Desplegar todas las ramas de routers y mostrar todas las máquinas" style="border-color:var(--cyan);color:var(--cyan)">📂 Desplegar Todo</button>
+          <button class="btn-sm" id="btn-collapse-all" title="Colapsar máquinas dependientes dentro de cada router">📁 Colapsar Todo</button>
+          <button class="btn-sm" id="btn-auto-layout">Auto-Layout</button>
+          <button class="btn-sm" id="btn-center">Centrar</button>
+          <button class="btn-sm" id="btn-zoom-in">+</button>
+          <button class="btn-sm" id="btn-zoom-out">−</button>
+          <button class="btn-sm" id="btn-animate-toggle">&#x23F8; Pausa</button>
+          <span class="map-zoom-label" id="zoom-label">100%</span>
+        </div>
+      </div>
+      <div class="map-container" id="map-container">
+        <canvas id="network-map"></canvas>
+        <div class="map-legend">
+          <div class="leg-item"><span class="leg-dot" style="background:#f59e0b"></span> Router/SW</div>
+          <div class="leg-item"><span class="leg-dot" style="background:#00f5ff"></span> Computadora</div>
+          <div class="leg-item"><span class="leg-dot" style="background:#a78bfa"></span> Impresora</div>
+          <div class="leg-item"><span class="leg-dot" style="background:#10b981"></span> Servidor</div>
+          <div class="leg-item"><span class="leg-dot" style="background:#ef4444"></span> Amenaza</div>
+          <div class="leg-item"><span class="leg-dot" style="background:#6b7280;border:1px dashed #6b7280"></span> Offline</div>
+        </div>
+        <div class="map-hint" id="map-hint">
+          Modo: <strong id="map-mode-label">Drag Nodos</strong> &nbsp;·&nbsp;
+          <strong>Clic en Router = Desplegar / Colapsar</strong> &nbsp;·&nbsp; Scroll=Zoom
+        </div>
+      </div>
+      <!-- Node popup -->
+      <div class="node-popup hidden" id="node-popup">
+        <div class="popup-header">
+          <span class="popup-icon" id="p-icon"></span>
+          <div style="display:flex;flex-direction:column;flex:1;min-width:0;overflow:hidden;">
+            <strong id="p-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></strong>
+            <span id="p-school-area" style="font-size:11px;color:var(--cyan);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></span>
+          </div>
+          <button class="popup-close" id="popup-close">&#x2715;</button>
+        </div>
+        <div class="popup-body">
+          <div class="popup-row" id="p-area-row"><span>Área / Ubicación</span><span id="p-area-val" style="color:var(--cyan);font-weight:700;">—</span></div>
+          <div class="popup-row"><span>IP</span><span id="p-ip" class="mono"></span></div>
+          <div class="popup-row"><span>MAC</span><span id="p-mac" class="mono"></span></div>
+          <div class="popup-row"><span>Fabricante</span><span id="p-vendor"></span></div>
+          <div class="popup-row"><span>VLAN</span><span id="p-vlan" class="mono"></span></div>
+          <div class="popup-row"><span>Estado</span><span id="p-status"></span></div>
+          <div class="popup-row"><span>Latencia</span><span id="p-latency"></span></div>
+          <div class="popup-row"><span>Perdida Pkt</span><span id="p-loss"></span></div>
+          <div class="popup-row"><span>Jitter</span><span id="p-jitter"></span></div>
+          <div class="popup-row"><span>Trafico &#x2191;</span><span id="p-up"></span></div>
+          <div class="popup-row"><span>Trafico &#x2193;</span><span id="p-down"></span></div>
+          <div class="popup-row" id="p-user-row"><span>Usuario</span><span id="p-user" class="mono"></span></div>
+          <div class="popup-row" id="p-threat-row"><span>Amenaza</span><span id="p-threat" class="danger-text"></span></div>
+        </div>
+        <div class="popup-mini-gauges" id="p-gauges"></div>
+
+        <!-- Router Branch Sub-panel -->
+        <div id="p-router-branch" class="popup-branch-box hidden">
+          <div class="popup-branch-title">
+            <span>📡 Máquinas Dependientes</span>
+            <span id="p-branch-count" class="badge-count">0</span>
+          </div>
+          <div id="p-branch-list" class="popup-branch-list"></div>
+          <div style="display:flex;gap:6px;flex-direction:column;margin-top:6px;">
+            <button id="p-btn-toggle-branch" class="btn-branch-toggle">📂 Desplegar Rama</button>
+            <button id="p-btn-msg-branch" class="btn-branch-broadcast">📢 Enviar Mensaje a este Grupo (<span id="p-branch-msg-count">0</span>)</button>
+          </div>
+        </div>
+
+        <div class="popup-actions">
+          <button class="btn-action direct-msg hidden" id="pa-direct-msg">✉️ Enviar Mensaje a este Equipo</button>
+          <button class="btn-action broadcast hidden" id="pa-broadcast-router">🚨 Mensaje Masivo a este Grupo</button>
+          <button class="btn-action" id="pa-rename" title="Personalizar nombre o área física">✏️ Renombrar Área</button>
+          <button class="btn-action block" id="pa-block">&#x1F6AB; Bloquear</button>
+          <button class="btn-action" id="pa-ping">&#x1F4F6; Ping</button>
+          <button class="btn-action" id="pa-trace">&#x1F50D; Traceroute</button>
+          <button class="btn-action" id="pa-scan">&#x26A1; Port Scan</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ VIEW: SOC DASHBOARD ══ -->
+    <div class="view" id="view-soc">
+      <div class="view-header">
+        <h2>🛡️ Centro de Operaciones de Seguridad (SOC)</h2>
+        <div class="view-controls">
+          <div class="soc-live-indicator"><span class="pulse-green-dot"></span> Monitoreo en Tiempo Real</div>
+          <button class="btn-sm" id="btn-soc-refresh" style="border-color:var(--cyan);color:var(--cyan)">↻ Actualizar</button>
+        </div>
+      </div>
+      <div class="soc-grid">
+
+        <!-- KPI Row -->
+        <div class="soc-kpi-row">
+          <div class="soc-kpi" id="kpi-threat-score">
+            <div class="soc-kpi-ring" id="kpi-ring-threat">
+              <svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="32" fill="none" stroke="rgba(0,245,255,0.1)" stroke-width="7"/><circle id="threat-arc" cx="40" cy="40" r="32" fill="none" stroke="url(#arcGrad)" stroke-width="7" stroke-linecap="round" stroke-dasharray="201" stroke-dashoffset="120" transform="rotate(-90 40 40)"/><defs><linearGradient id="arcGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#ef4444"/><stop offset="100%" stop-color="#f97316"/></linearGradient></defs></svg>
+              <div class="soc-kpi-value" id="threat-score-val">37</div>
+            </div>
+            <div class="soc-kpi-label">Risk Score</div>
+            <div class="soc-kpi-sub" style="color:#f59e0b">MEDIO</div>
+          </div>
+          <div class="soc-kpi" id="kpi-events">
+            <div class="soc-kpi-big" id="kpi-events-val">0</div>
+            <div class="soc-kpi-label">Eventos / min</div>
+            <div class="soc-kpi-sub" id="kpi-events-trend" style="color:#10b981">▲ Normal</div>
+          </div>
+          <div class="soc-kpi" id="kpi-hosts-ok">
+            <div class="soc-kpi-big" id="kpi-hosts-ok-val">—</div>
+            <div class="soc-kpi-label">Hosts Saludables</div>
+            <div class="soc-kpi-sub" id="kpi-hosts-pct" style="color:#10b981">—% de la red</div>
+          </div>
+          <div class="soc-kpi" id="kpi-blocked">
+            <div class="soc-kpi-big" style="color:#ef4444" id="kpi-blocked-val">0</div>
+            <div class="soc-kpi-label">En Cuarentena</div>
+            <div class="soc-kpi-sub" style="color:#94a3b8">VLAN 99</div>
+          </div>
+          <div class="soc-kpi" id="kpi-anomalies">
+            <div class="soc-kpi-big" style="color:#f97316" id="kpi-anomalies-val">0</div>
+            <div class="soc-kpi-label">Anomalías detectadas</div>
+            <div class="soc-kpi-sub" style="color:#94a3b8">Última hora</div>
+          </div>
+        </div>
+
+        <!-- Timeline de Ataques -->
+        <div class="soc-card soc-span2">
+          <div class="soc-card-header">
+            <span class="soc-card-title">📈 Timeline de Eventos de Seguridad (últimas 2 horas)</span>
+            <div class="soc-legend">
+              <span class="soc-leg" style="color:#ef4444">● Crítico</span>
+              <span class="soc-leg" style="color:#f97316">● Alto</span>
+              <span class="soc-leg" style="color:#f59e0b">● Medio</span>
+              <span class="soc-leg" style="color:#00f5ff">● Bajo</span>
+            </div>
+          </div>
+          <canvas id="soc-timeline" height="90"></canvas>
+        </div>
+
+        <!-- Heatmap de Amenazas por Dispositivo -->
+        <div class="soc-card">
+          <div class="soc-card-header">
+            <span class="soc-card-title">🌡️ Heatmap de Riesgo por Host</span>
+          </div>
+          <div id="soc-heatmap" class="soc-heatmap-grid"></div>
+        </div>
+
+        <!-- Actividad sospechosa reciente -->
+        <div class="soc-card">
+          <div class="soc-card-header">
+            <span class="soc-card-title">🔍 Actividad Sospechosa Reciente</span>
+            <span class="soc-badge-live">LIVE</span>
+          </div>
+          <div id="soc-activity-feed" class="soc-feed"></div>
+        </div>
+
+        <!-- Health Score por dispositivo -->
+        <div class="soc-card soc-span2">
+          <div class="soc-card-header">
+            <span class="soc-card-title">💚 Puntuación de Salud por Dispositivo (0–100)</span>
+            <div style="font-size:10px;color:var(--text-3)">CPU · RAM · Latencia · Pérdida · Amenazas</div>
+          </div>
+          <div id="soc-health-scores" class="soc-health-row"></div>
+        </div>
+
+        <!-- Top puertos abiertos peligrosos -->
+        <div class="soc-card">
+          <div class="soc-card-header">
+            <span class="soc-card-title">⚠️ Servicios de Riesgo Detectados</span>
+          </div>
+          <div id="soc-risky-ports" class="soc-risk-list"></div>
+        </div>
+
+        <!-- Geolocalización de IPs externas -->
+        <div class="soc-card">
+          <div class="soc-card-header">
+            <span class="soc-card-title">🌍 IPs Externas / Geolocalización</span>
+          </div>
+          <div id="soc-geo-list" class="soc-geo-list"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══ VIEW: VULNERABILIDADES ══ -->
+    <div class="view" id="view-vulns">
+      <div class="view-header">
+        <h2>⚡ Análisis de Vulnerabilidades y Riesgos</h2>
+        <div class="view-controls">
+          <button class="btn-sm" id="btn-vuln-scan" style="background:linear-gradient(135deg,#ef4444,#b91c1c);border:none;color:#fff;font-weight:700">🔍 Ejecutar Análisis Completo</button>
+          <button class="btn-sm" id="btn-vuln-export">📋 Exportar Reporte</button>
+        </div>
+      </div>
+      <div class="vulns-grid">
+
+        <!-- Resumen de Severidad -->
+        <div class="vuln-summary-bar">
+          <div class="vsb-item" style="--c:#7f1d1d;--b:#ef4444">
+            <div class="vsb-count" id="vsev-critical">0</div>
+            <div class="vsb-label">CRÍTICAS</div>
+          </div>
+          <div class="vsb-item" style="--c:#7c2d12;--b:#f97316">
+            <div class="vsb-count" id="vsev-high">0</div>
+            <div class="vsb-label">ALTAS</div>
+          </div>
+          <div class="vsb-item" style="--c:#713f12;--b:#f59e0b">
+            <div class="vsb-count" id="vsev-medium">0</div>
+            <div class="vsb-label">MEDIAS</div>
+          </div>
+          <div class="vsb-item" style="--c:#1e3a5f;--b:#3b82f6">
+            <div class="vsb-count" id="vsev-low">0</div>
+            <div class="vsb-label">BAJAS</div>
+          </div>
+          <div class="vsb-progress-area">
+            <div class="vsb-prog-title">Índice de Exposición de la Red</div>
+            <div class="vsb-prog-bar"><div class="vsb-prog-fill" id="vuln-exposure-bar"></div></div>
+            <div class="vsb-prog-score" id="vuln-exposure-score">Calculando...</div>
+          </div>
+        </div>
+
+        <!-- Tabla de Vulnerabilidades -->
+        <div class="vuln-table-wrapper">
+          <table class="vuln-table" id="vuln-table">
+            <thead>
+              <tr>
+                <th>Severidad</th>
+                <th>CVE / Tipo</th>
+                <th>Descripción</th>
+                <th>Hosts Afectados</th>
+                <th>CVSS</th>
+                <th>Remediación</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="vuln-tbody"></tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══ VIEW: DISPOSITIVOS ══ -->
+    <div class="view" id="view-devices">
+      <div class="view-header">
+        <h2>Inventario de Dispositivos</h2>
+        <div class="view-controls">
+          <select id="sort-devices" class="select-sm">
+            <option value="ip">Por IP</option>
+            <option value="name">Por nombre</option>
+            <option value="status">Por estado</option>
+            <option value="threat">Por amenaza</option>
+            <option value="traffic">Por trafico</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-wrapper">
+        <table id="devices-table">
+          <thead>
+            <tr>
+              <th>Estado</th><th>IP</th><th>Nombre</th><th>MAC</th>
+              <th>Fabricante</th><th>Tipo</th><th>VLAN</th>
+              <th>Latencia</th><th>Jitter</th><th>Pkt Loss</th>
+              <th>Trafico</th><th>Amenaza</th><th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="devices-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ VIEW: TRAFICO ══ -->
+    <div class="view" id="view-traffic">
+      <div class="view-header"><h2>Monitor de Trafico en Tiempo Real</h2></div>
+      <div class="traffic-grid">
+        <div class="traffic-card span2">
+          <div class="tc-header">
+            <h3>Trafico Agregado (60s)</h3>
+            <div style="display:flex;gap:16px;font-size:11px">
+              <span style="color:#00f5ff">&#x2193; Download</span>
+              <span style="color:#7c3aed">&#x2191; Upload</span>
+            </div>
+          </div>
+          <canvas id="chart-total" height="130"></canvas>
+        </div>
+        <div class="traffic-card">
+          <h3>Top Consumidores</h3>
+          <canvas id="chart-top5" height="200"></canvas>
+        </div>
+        <div class="traffic-card">
+          <h3>Latencia / Jitter por host</h3>
+          <canvas id="chart-latency" height="200"></canvas>
+        </div>
+        <div class="traffic-card span2">
+          <h3>Flujos activos</h3>
+          <div id="flow-list" class="flow-scroll"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ VIEW: HERRAMIENTAS ══ -->
+    <div class="view" id="view-tools">
+      <div class="view-header">
+        <h2>&#x2692; Herramientas de Diagnostico</h2>
+      </div>
+      <div class="tools-grid">
+
+        <!-- Ping -->
+        <div class="tool-card" id="tool-ping-card">
+          <div class="tool-card-header">
+            <span class="tool-icon">&#x1F4F6;</span>
+            <h3>Ping</h3>
+          </div>
+          <div class="tool-input-row">
+            <input type="text" id="ping-target" placeholder="192.168.80.1 o hostname" class="tool-input" value="192.168.80.1"/>
+            <input type="number" id="ping-count" value="10" min="1" max="100" class="tool-input-sm" title="Paquetes"/>
+            <button class="btn-tool" id="btn-ping">Ping</button>
+            <button class="btn-tool stop hidden" id="btn-ping-stop">&#x25A0;</button>
+          </div>
+          <div class="tool-output" id="ping-output">
+            <span class="tool-placeholder">Ingresa un host y presiona Ping...</span>
+          </div>
+          <div class="ping-stats hidden" id="ping-stats">
+            <div class="pstat"><span>Min</span><strong id="ps-min">—</strong></div>
+            <div class="pstat"><span>Avg</span><strong id="ps-avg">—</strong></div>
+            <div class="pstat"><span>Max</span><strong id="ps-max">—</strong></div>
+            <div class="pstat"><span>Loss</span><strong id="ps-loss">—</strong></div>
+            <div class="pstat"><span>Jitter</span><strong id="ps-jitter">—</strong></div>
+          </div>
+          <canvas id="ping-chart" height="70" class="ping-canvas"></canvas>
+        </div>
+
+        <!-- Traceroute -->
+        <div class="tool-card" id="tool-trace-card">
+          <div class="tool-card-header">
+            <span class="tool-icon">&#x1F5FA;</span>
+            <h3>Traceroute</h3>
+          </div>
+          <div class="tool-input-row">
+            <input type="text" id="trace-target" placeholder="192.168.80.1 o IP externa" class="tool-input" value="8.8.8.8"/>
+            <button class="btn-tool" id="btn-trace">Trazar</button>
+            <button class="btn-tool stop hidden" id="btn-trace-stop">&#x25A0;</button>
+          </div>
+          <div class="trace-output" id="trace-output">
+            <span class="tool-placeholder">Ingresa destino y presiona Trazar...</span>
+          </div>
+        </div>
+
+        <!-- Port Scan -->
+        <div class="tool-card" id="tool-portscan-card">
+          <div class="tool-card-header">
+            <span class="tool-icon">&#x26A1;</span>
+            <h3>Port Scanner</h3>
+          </div>
+          <div class="tool-input-row">
+            <input type="text" id="scan-target" placeholder="192.168.80.x" class="tool-input" value="192.168.80.1"/>
+            <select id="scan-preset" class="tool-select">
+              <option value="common">Top 20 puertos</option>
+              <option value="web">Web (80,443,8080)</option>
+              <option value="admin">Admin (22,23,3389)</option>
+              <option value="db">DB (3306,5432,1433)</option>
+              <option value="full">Top 100</option>
+            </select>
+            <button class="btn-tool" id="btn-portscan">Escanear</button>
+          </div>
+          <div class="portscan-output" id="portscan-output">
+            <span class="tool-placeholder">Selecciona host y presiona Escanear...</span>
+          </div>
+        </div>
+
+        <!-- DNS Lookup -->
+        <div class="tool-card" id="tool-dns-card">
+          <div class="tool-card-header">
+            <span class="tool-icon">&#x1F310;</span>
+            <h3>DNS Lookup / Whois</h3>
+          </div>
+          <div class="tool-input-row">
+            <input type="text" id="dns-target" placeholder="google.com o 8.8.8.8" class="tool-input" value="google.com"/>
+            <button class="btn-tool" id="btn-dns">Lookup</button>
+          </div>
+          <div class="tool-output" id="dns-output">
+            <span class="tool-placeholder">Ingresa un dominio o IP...</span>
+          </div>
+        </div>
+
+        <!-- Wake on LAN -->
+        <div class="tool-card" id="tool-wol-card">
+          <div class="tool-card-header">
+            <span class="tool-icon">&#x26A1;</span>
+            <h3>Wake on LAN</h3>
+          </div>
+          <div class="tool-input-row">
+            <select id="wol-device" class="tool-input"></select>
+            <button class="btn-tool" id="btn-wol">Encender</button>
+          </div>
+          <div class="tool-output" id="wol-output">
+            <span class="tool-placeholder">Selecciona un dispositivo offline...</span>
+          </div>
+        </div>
+
+        <!-- Bandwidth Test -->
+        <div class="tool-card" id="tool-bw-card">
+          <div class="tool-card-header">
+            <span class="tool-icon">&#x1F4CA;</span>
+            <h3>Test de Ancho de Banda</h3>
+          </div>
+          <div class="tool-input-row">
+            <input type="text" id="bw-target" placeholder="192.168.80.x" class="tool-input" value="192.168.80.1"/>
+            <select id="bw-duration" class="tool-select">
+              <option value="5">5s</option>
+              <option value="10" selected>10s</option>
+              <option value="30">30s</option>
+            </select>
+            <button class="btn-tool" id="btn-bw">Medir</button>
+          </div>
+          <div class="bw-result hidden" id="bw-result">
+            <div class="bw-bar-container">
+              <div class="bw-label">Download</div>
+              <div class="bw-bar-wrap"><div class="bw-bar" id="bw-dl-bar"></div></div>
+              <div class="bw-val" id="bw-dl-val"></div>
+            </div>
+            <div class="bw-bar-container">
+              <div class="bw-label">Upload</div>
+              <div class="bw-bar-wrap"><div class="bw-bar upload" id="bw-ul-bar"></div></div>
+              <div class="bw-val" id="bw-ul-val"></div>
+            </div>
+          </div>
+          <div class="tool-output" id="bw-output">
+            <span class="tool-placeholder">Ingresa host destino y mide...</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══ VIEW: ESCÁNER MULTI-RED & WAN ══ -->
+    <div class="view" id="view-scanner-pro">
+      <div class="view-header">
+        <h2>📡 Escáner de Extensiones de Red & Auditoría WAN</h2>
+        <div class="view-controls">
+          <span class="scan-status" style="border:1px solid var(--border)"><span class="pulse-green-dot"></span> Motor Multi-Rango Activo</span>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 1: EXTENSIONES DE RED & SUBREDES -->
+      <div class="ext-scan-box">
+        <div class="tool-card-header" style="margin-bottom:12px">
+          <span class="tool-icon">🏢</span>
+          <div>
+            <h3 style="font-size:14px;color:var(--text-1);margin-bottom:2px">1. Escáner de Extensiones de Red (Subredes & Otros Routers)</h3>
+            <span style="font-size:11px;color:var(--text-3)">Descubre dispositivos en cascada detrás de routers Belkin, TP-Link, switches secundarios, VLANs o cualquier CIDR</span>
+          </div>
+        </div>
+
+        <div class="tool-input-row" style="margin-bottom:10px">
+          <label style="font-size:11px;color:var(--text-2);min-width:110px">Subred Objetivo:</label>
+          <select id="ext-subnet-select" class="tool-select" style="min-width:340px">
+            <optgroup label="📍 Sede Levarte (Módulo A-15)">
+              <option value="192.168.1.0/24">192.168.1.99 · FortiGate-GW (E0:23:FF:36:E1:55) → Subred Principal Levarte (192.168.1.0/24)</option>
+              <option value="192.168.9.0/24">192.168.9.1 · TP-Link Archer-AX55 → Extensión WiFi Docentes & Aulas (192.168.9.0/24)</option>
+            </optgroup>
+            <optgroup label="🏫 Sede Patricio Lynch">
+              <option value="192.168.10.0/24">192.168.80.10 · TP-SW-01 (90:9A:4A:1A:89:9E) → Administración Central (192.168.10.0/24)</option>
+              <option value="192.168.12.0/24">192.168.80.12 · TP-SW-02 (14:EB:B6:A4:39:F0) → Unidad Formación Profesional (192.168.12.0/24)</option>
+              <option value="192.168.13.0/24">192.168.80.13 · TP-SW-03 (C0:06:C3:E4:29:8C) → Laboratorio Química / Ciencias (192.168.13.0/24)</option>
+              <option value="192.168.14.0/24">192.168.80.14 · ASUS-Router-14 (FC:34:97:D0:B7:A8) → Talleres / Gastronomía (192.168.14.0/24)</option>
+              <option value="192.168.15.0/24">192.168.80.15 · TP-SW-04 (10:27:F5:E2:EA:41) → Taller Elaboración Industrial (192.168.15.0/24)</option>
+              <option value="172.16.16.0/24">192.168.80.16 · TP-SW-05 (C4:6E:1F:47:76:1D) → Simulador Maniobras Portuarias & CCTV (172.16.16.0/24)</option>
+              <option value="192.168.17.0/24">192.168.80.17 · TP-SW-06 (84:D8:1B:ED:C7:9D) → Operaciones Portuarias & Simuladores TOS (192.168.17.0/24)</option>
+              <option value="192.168.20.0/24">192.168.80.20 · TP-SW-07 (F8:1A:67:99:41:79) → Pabellón Clases Norte (192.168.20.0/24)</option>
+              <option value="10.0.0.0/24">192.168.80.47 · yuri-ThinkPad → VLAN 10 Servidor TI (10.0.0.0/24)</option>
+            </optgroup>
+            <option value="custom">✏️ Ingresar CIDR / Rango Personalizado...</option>
+          </select>
+
+          <div id="ext-custom-wrap" class="hidden" style="display:flex;gap:6px;align-items:center">
+            <input type="text" id="ext-custom-input" class="tool-input" placeholder="Ej: 192.168.100.0/24" style="width:140px"/>
+            <select id="ext-custom-bridge" class="tool-select" title="Router de Origen">
+              <optgroup label="📍 Routers / Switches Sede Levarte">
+                <option value="192.168.1.99">Puente: GW-FortiGate (.99) · Principal Levarte</option>
+                <option value="192.168.1.253">Puente: Web-Switch-Levarte (.253) · Core Aulas & Talleres</option>
+                <option value="192.168.9.1">Puente: GW-Router-WiFi (192.168.9.1) · WiFi Docentes Piso 2</option>
+                <option value="192.168.9.10">Puente: SW-Piso2-Levarte (192.168.9.10) · Distribución Piso 2</option>
+                <option value="192.168.9.20">Puente: Router-Taller-Tecnico (192.168.9.20) · Bajo Nivel</option>
+                <option value="192.168.9.99">Puente: Router-Backup (192.168.9.99) · Enlace Microondas</option>
+              </optgroup>
+              <optgroup label="🏫 Routers / Switches Sede Lynch">
+                <option value="192.168.80.9">Puente: Belkin-AP (.9) · WiFi Patio</option>
+                <option value="192.168.80.10">Puente: TP-SW-01 (.10) · Admin</option>
+                <option value="192.168.80.12">Puente: TP-SW-02 (.12) · Formación Prof.</option>
+                <option value="192.168.80.13">Puente: TP-SW-03 (.13) · Lab. Química</option>
+                <option value="192.168.80.14">Puente: ASUS-Router (.14) · Gastronomía</option>
+                <option value="192.168.80.15">Puente: TP-SW-04 (.15) · Elaboración Industrial</option>
+                <option value="192.168.80.16">Puente: TP-SW-05 (.16) · Simulador Maniobras</option>
+                <option value="192.168.80.17">Puente: TP-SW-06 (.17) · Operaciones Portuarias</option>
+                <option value="192.168.80.20">Puente: TP-SW-07 (.20) · Clases Norte</option>
+                <option value="192.168.80.1">Puente: GW-Fortinet (.1) · Central</option>
+              </optgroup>
+            </select>
+          </div>
+
+          <button class="btn-tool" id="btn-ext-scan">&#x25B6; Escanear Router</button>
+          <button class="btn-tool" id="btn-ext-scan-all" style="background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;border-color:#7c3aed" title="Escanear y mapear todos los routers a la vez">&#x1F310; Mapear Todos</button>
+          <button class="btn-tool stop hidden" id="btn-ext-stop">&#x25A0; Detener</button>
+          <button class="btn-tool hidden" id="btn-ext-integrate" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;border-color:#10b981">➕ Integrar al Mapa de Red</button>
+        </div>
+
+        <!-- Progress wrap -->
+        <div class="ext-progress-wrap hidden" id="ext-progress-wrap">
+          <div class="ext-status-label" id="ext-status-label">Preparando escaneo de extensión...</div>
+          <div class="ext-progress-track">
+            <div class="ext-progress-bar" id="ext-progress-bar"></div>
+          </div>
+        </div>
+
+        <!-- Results Table -->
+        <div class="table-wrapper hidden" id="ext-results-card" style="margin-top:14px;max-height:220px;overflow-y:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>Dispositivo</th>
+                <th>IP</th>
+                <th>MAC</th>
+                <th>Fabricante</th>
+                <th>Latencia</th>
+                <th>Puertos Abiertos</th>
+                <th>Enrutamiento</th>
+              </tr>
+            </thead>
+            <tbody id="ext-results-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 2: AUDITORÍA FUERA DE LA LAN (WAN) -->
+      <div class="ext-scan-box" style="margin-top:14px">
+        <div class="tool-card-header" style="margin-bottom:12px">
+          <span class="tool-icon">🌐</span>
+          <div>
+            <h3 style="font-size:14px;color:var(--text-1);margin-bottom:2px">2. Escáner Fuera de la LAN (WAN & Auditoría de Internet)</h3>
+            <span style="font-size:11px;color:var(--text-3)">Verifica tu IP pública real, proveedor ISP, fuga de puertos WAN hacia internet y latencia global</span>
+          </div>
+          <button class="btn-tool" id="btn-wan-probe" style="margin-left:auto">&#x21BB; Reauditar WAN Externa</button>
+        </div>
+
+        <div class="wan-dashboard-grid">
+          <!-- Card 1: Identidad WAN & Firewall -->
+          <div class="wan-card">
+            <div class="wan-card-header">
+              <h3><span>🛡️</span> Identidad WAN & Salida a Internet</h3>
+            </div>
+            <div class="wan-info-list">
+              <div class="wan-info-item">
+                <span>IP Pública Externa:</span>
+                <strong class="mono" id="wan-public-ip" style="color:var(--cyan);font-size:13px">Detectando...</strong>
+              </div>
+              <div class="wan-info-item">
+                <span>Proveedor / ISP:</span>
+                <strong id="wan-isp-name">Consultando...</strong>
+              </div>
+              <div class="wan-info-item">
+                <span>Ubicación Geográfica:</span>
+                <strong id="wan-location">Geolocalizando...</strong>
+              </div>
+              <div class="wan-info-item">
+                <span>Estado Perimetral:</span>
+                <div id="wan-fw-status"><span class="status-shield-ok">🛡️ Fortinet Firewall Activo</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Sonda personalizada hacia el exterior -->
+          <div class="wan-card">
+            <div class="wan-card-header">
+              <h3><span>🎯</span> Probar Objetivo Exterior (WAN Probe)</h3>
+            </div>
+            <p style="font-size:11px;color:var(--text-2);margin:0">Ingresa cualquier dominio o IP pública fuera de tu LAN para verificar tránsito y resolución:</p>
+            <div class="tool-input-row">
+              <input type="text" id="wan-custom-target" class="tool-input" placeholder="google.com, 1.1.1.1, cloudflare.com..." value="google.com"/>
+              <button class="btn-tool" id="btn-wan-custom">Sondear WAN</button>
+            </div>
+            <div class="tool-output" id="wan-custom-output" style="max-height:95px;min-height:75px">
+              <span class="tool-placeholder">Ingresa un host exterior para probar la salida de red...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Matriz de Latencia Global -->
+        <h4 style="font-size:12px;color:var(--text-2);margin-bottom:8px">Matriz de Latencia hacia Nodos Globales (WAN Anycast & Cloud):</h4>
+        <div class="wan-latency-grid" id="wan-latency-grid"></div>
+
+        <!-- Auditoría de Puertos Expuestos a Internet -->
+        <h4 style="font-size:12px;color:var(--text-2);margin:14px 0 8px 0">Auditoría Perimetral de Puertos Expuestos al Mundo (WAN Leak Detection):</h4>
+        <div class="wan-ports-container" id="wan-ports-container"></div>
+        <div id="wan-ports-summary" style="margin-top:10px"></div>
+      </div>
+    </div>
+
+    <!-- ══ VIEW: ALERTAS ══ -->
+    <div class="view" id="view-alerts">
+      <div class="view-header">
+        <h2>Centro de Alertas</h2>
+        <div class="view-controls">
+          <select id="alert-filter" class="select-sm">
+            <option value="all">Todas</option>
+            <option value="critical">Criticas</option>
+            <option value="high">Altas</option>
+            <option value="medium">Medias</option>
+            <option value="resolved">Resueltos</option>
+          </select>
+          <button class="btn-sm danger" id="btn-clear-alerts">Limpiar todo</button>
+        </div>
+      </div>
+      <div id="alerts-list"></div>
+      <div id="alerts-empty" class="empty-state hidden">
+        <div class="empty-icon">&#x2705;</div>
+        <p>Sin alertas activas. La red esta limpia.</p>
+      </div>
+      <div id="improvements-panel"></div>
+    </div>
+
+    <!-- ══ VIEW: CONEXIONES ══ -->
+    <div class="view" id="view-connections">
+      <div class="view-header">
+        <h2>Conexiones Activas</h2>
+        <div class="view-controls">
+          <select id="conn-filter" class="select-sm">
+            <option value="all">Todas</option>
+            <option value="external">Externas</option>
+            <option value="internal">Internas</option>
+            <option value="danger">Peligrosas</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Origen</th><th>Destino</th><th>Puerto</th><th>Protocolo</th><th>Bytes</th><th>Duracion</th><th>Estado</th><th>Riesgo</th><th>Accion</th></tr>
+          </thead>
+          <tbody id="connections-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ VIEW: CONTROL ══ -->
+    <div class="view" id="view-control">
+      <div class="view-header"><h2>&#x2699; Panel de Control y Politicas</h2></div>
+      <div class="control-grid">
+
+        <!-- ⛔ Panel de Cuarentena y Dispositivos Bloqueados -->
+        <div class="ctrl-card ctrl-card-wide" id="card-blocked-devices">
+          <div class="card-header-flex">
+            <div>
+              <h3 style="color:#ef4444;display:flex;align-items:center;gap:8px">
+                <span>⛔ Dispositivos Bloqueados en Cuarentena</span>
+                <span class="badge-count-danger" id="badge-total-blocked">0</span>
+              </h3>
+              <p class="ctrl-card-sub">Control de hosts aislados de la red. Puedes ver los mensajes de advertencia enviados, su historial y desbloquearlos con un solo clic.</p>
+            </div>
+            <div class="blocked-header-actions">
+              <button class="btn-tool-sm success" id="btn-unblock-all" style="display:none">🟢 Desbloquear Todos</button>
+            </div>
+          </div>
+          <div id="blocked-devices-list" class="blocked-devices-container"></div>
+        </div>
+
+        <!-- VLAN Manager -->
+        <div class="ctrl-card">
+          <h3>&#x1F4BB; Gestor de VLANs</h3>
+          <div class="vlan-list" id="vlan-list"></div>
+          <div class="tool-input-row" style="margin-top:10px">
+            <select id="vlan-device" class="tool-input"></select>
+            <select id="vlan-id" class="tool-select">
+              <option value="1">VLAN 1 — Default</option>
+              <option value="10">VLAN 10 — Admin</option>
+              <option value="20">VLAN 20 — Users</option>
+              <option value="30">VLAN 30 — IoT</option>
+              <option value="99">VLAN 99 — Cuarentena</option>
+            </select>
+            <button class="btn-tool" id="btn-assign-vlan">Asignar</button>
+          </div>
+        </div>
+
+        <!-- DNS Blocklist -->
+        <div class="ctrl-card">
+          <h3>&#x1F6AB; Blocklist DNS</h3>
+          <div class="tool-input-row">
+            <input type="text" id="dns-block-input" placeholder="dominio.com" class="tool-input"/>
+            <button class="btn-tool" id="btn-dns-block">Bloquear</button>
+          </div>
+          <div class="blocklist" id="dns-blocklist"></div>
+        </div>
+
+        <!-- MAC Blacklist -->
+        <div class="ctrl-card">
+          <h3>&#x1F512; Blacklist MAC / IP</h3>
+          <div class="tool-input-row">
+            <input type="text" id="mac-block-input" placeholder="MAC o IP" class="tool-input"/>
+            <button class="btn-tool" id="btn-mac-block">Agregar</button>
+          </div>
+          <div class="blocklist" id="mac-blocklist"></div>
+        </div>
+
+        <!-- Thresholds -->
+        <div class="ctrl-card">
+          <h3>&#x1F4CA; Umbrales de Alerta</h3>
+          <div class="threshold-row">
+            <label>Latencia max (ms)</label>
+            <input type="range" id="th-latency" min="10" max="500" value="100" class="range-input"/>
+            <span class="range-val" id="th-latency-val">100ms</span>
+          </div>
+          <div class="threshold-row">
+            <label>Perdida de paquetes (%)</label>
+            <input type="range" id="th-loss" min="1" max="50" value="10" class="range-input"/>
+            <span class="range-val" id="th-loss-val">10%</span>
+          </div>
+          <div class="threshold-row">
+            <label>Trafico max (MB/s)</label>
+            <input type="range" id="th-bw" min="1" max="1000" value="100" class="range-input"/>
+            <span class="range-val" id="th-bw-val">100MB/s</span>
+          </div>
+          <div class="threshold-row">
+            <label>Nuevos dispositivos</label>
+            <label class="toggle"><input type="checkbox" id="th-newdev" checked><span class="toggle-slider"></span></label>
+          </div>
+          <button class="btn-tool" style="margin-top:12px;width:100%" id="btn-save-thresholds">Guardar umbrales</button>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="ctrl-card">
+          <h3>&#x26A1; Acciones Rapidas</h3>
+          <div class="action-grid">
+            <button class="action-btn" id="qa-scan-all">&#x1F50D; Escanear red completa</button>
+            <button class="action-btn" id="qa-flush-dns">&#x1F4A8; Flush DNS Cache</button>
+            <button class="action-btn" id="qa-arp-table">&#x1F4CB; Ver tabla ARP</button>
+            <button class="action-btn" id="qa-netstat">&#x1F310; Netstat local</button>
+            <button class="action-btn danger" id="qa-isolate">&#x26D4; Aislar host</button>
+            <button class="action-btn" id="qa-export">&#x1F4BE; Exportar inventario</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══ VIEW: HISTORIAL WEB ESCOLAR & CONTROL DE MENORES ══ -->
+    <div class="view" id="view-web-audit">
+      <div class="view-header" style="flex-wrap:wrap;gap:12px;">
+        <div>
+          <h2>🌐 Historial de Navegación & Control Escolar</h2>
+          <span style="font-size:12px;color:var(--text-3);display:block;margin-top:2px;">
+            Auditoría en tiempo real de consultas DNS y sitios web visitados por computadores y celulares en la LAN (Protección de Menores)
+          </span>
+        </div>
+        <div class="view-controls">
+          <button class="btn-sm" id="btn-refresh-web-audit" style="border-color:var(--cyan);color:var(--cyan)">🔄 Actualizar</button>
+          <button class="btn-sm" id="btn-export-web-audit">📥 Exportar Registro</button>
+        </div>
+      </div>
+
+      <!-- Métricas Rápidas Escolar -->
+      <div class="web-audit-stats-grid">
+        <div class="stat-card">
+          <div class="stat-card-label">Dominios Auditados</div>
+          <div class="stat-card-val" id="wa-total-queries" style="color:var(--cyan);">0</div>
+          <div class="stat-card-sub">Peticiones DNS capturadas</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">Dominios Bloqueados</div>
+          <div class="stat-card-val" id="wa-blocked-count" style="color:var(--red);">5</div>
+          <div class="stat-card-sub">Redes/Juegos restringidos</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">Dispositivos Supervisados</div>
+          <div class="stat-card-val" id="wa-devices-count" style="color:var(--green);">0</div>
+          <div class="stat-card-sub">PCs, laptops y celulares</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">Filtro Perimetral Escolar</div>
+          <div class="stat-card-val" style="color:#10b981;font-size:16px;margin-top:8px;">🛡️ ACTIVO</div>
+          <div class="stat-card-sub">Protección CIPA / Menores</div>
+        </div>
+      </div>
+
+      <!-- Barra de Filtros y Bloqueo Rápido -->
+      <div class="web-audit-toolbar">
+        <div style="display:flex;gap:8px;flex:1;align-items:center;flex-wrap:wrap;">
+          <input type="text" id="wa-search-input" placeholder="Buscar por IP, celular, alumno o dominio (ej: tiktok, youtube)..." class="tool-input" style="flex:1;min-width:240px;"/>
+          <div class="wa-category-chips">
+            <button class="wa-chip active" data-cat="all">Todos</button>
+            <button class="wa-chip" data-cat="Educativo">Educativo</button>
+            <button class="wa-chip" data-cat="Redes Sociales">Redes Sociales</button>
+            <button class="wa-chip" data-cat="Streaming">Streaming</button>
+            <button class="wa-chip" data-cat="Juegos">Juegos</button>
+            <button class="wa-chip danger" data-cat="Bloqueado">🚫 Bloqueados</button>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:6px;align-items:center;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:6px;padding:4px 8px;">
+          <input type="text" id="wa-new-block-domain" placeholder="Dominio a restringir (ej: roblox.com)" style="background:#091224;border:1px solid #334155;color:#f8fafc;padding:5px 8px;border-radius:4px;font-size:12px;font-family:monospace;width:170px;"/>
+          <button class="btn-sm danger" id="btn-wa-add-block" style="padding:5px 10px;font-size:11px;">🚫 Bloquear</button>
+        </div>
+      </div>
+
+      <!-- Tabla de Auditoría Web -->
+      <div class="table-wrapper" style="margin-top:14px;max-height:calc(100vh - 360px);overflow-y:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:85px;">Hora</th>
+              <th>Dispositivo / Equipo</th>
+              <th style="width:110px;">IP LAN</th>
+              <th>Sitio / Dominio Consultado</th>
+              <th style="width:140px;">Categoría</th>
+              <th style="width:130px;">Nivel de Riesgo</th>
+              <th style="width:110px;">Acceso</th>
+              <th style="width:110px;text-align:center;">Acción</th>
+            </tr>
+          </thead>
+          <tbody id="wa-table-tbody">
+            <tr>
+              <td colspan="8" style="text-align:center;padding:24px;color:var(--text-3);">
+                Cargando registros de auditoría de navegación en vivo...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ VIEW: PLANO ARQUITECTÓNICO (LEVARTE DWG MÓDULO A-15 & LYNCH DWG AC1018) ══ -->
+    <div class="view" id="view-plano-lynch">
+      <div class="view-header" style="flex-wrap:wrap;gap:12px;">
+        <div>
+          <h2 id="plano-view-title">📐 Plano Arquitectónico y Despliegue Físico por Piso</h2>
+          <span id="plano-view-subtitle" style="font-size:12px;color:var(--text-3);display:block;margin-top:2px;">
+            Sede Levarte (Módulo A-15 · 1° y 2° Medio) · Escala 1 : 200 · DWG Oficial
+          </span>
+        </div>
+        <div class="view-controls">
+          <!-- Selector de Sede para el Plano Arquitectónico -->
+          <div class="map-mode-segmented" id="plano-sede-tabs" style="border-color:rgba(56,189,248,0.35);">
+            <button class="seg-btn active" id="btn-plano-sede-levarte" data-plano-sede="levarte" title="Ver plano arquitectónico de Sede Levarte con despliegue por piso">📍 Sede Levarte (Módulo A-15)</button>
+            <button class="seg-btn" id="btn-plano-sede-lynch" data-plano-sede="lynch" title="Ver plano arquitectónico de Sede Patricio Lynch">🏫 Sede Patricio Lynch</button>
+          </div>
+          <!-- Selector de Pisos / Niveles (generado dinámicamente) -->
+          <div class="plano-level-segmented" id="plano-level-tabs">
+            <button class="plano-tab-btn" data-level="levarte-n0">📍 Bajo Nivel (Zócalo / Taller)</button>
+            <button class="plano-tab-btn active" data-level="levarte-n1">📍 Nivel 1 (Admin & 1° Medio)</button>
+            <button class="plano-tab-btn" data-level="levarte-n2">📍 Nivel 2 (2° Medio & WiFi .9.x)</button>
+            <button class="plano-tab-btn" data-level="all">🏢 Edificio Completo</button>
+          </div>
+          <button class="btn-sm" id="btn-refresh-plano" style="border-color:var(--cyan);color:var(--cyan)">🔄 Sincronizar En Vivo</button>
+        </div>
+      </div>
+
+      <!-- Barra de Filtros Rápidos y Buscador -->
+      <div class="plano-toolbar-card">
+        <div class="plano-search-box">
+          <span class="plano-search-icon">🔍</span>
+          <input type="text" id="plano-search-input" placeholder="Buscar IP o equipo en el plano (ej: 192.168.1.130, Karlita, 192.168.9.1, SCADA)..." autocomplete="off"/>
+          <button id="plano-search-clear" style="display:none;">✕</button>
+        </div>
+        <div class="plano-filter-chips" id="plano-chips-wrap">
+          <span style="font-size:11px;color:#64748b;font-weight:600;margin-right:4px;">Filtrar Recinto / Sector:</span>
+          <!-- Chips renderizados dinámicamente según la sede -->
+        </div>
+      </div>
+
+      <!-- Banner Informativo IP WAN vs LAN por Sede -->
+      <div class="plano-wan-banner" id="plano-wan-banner">
+        <div style="display:flex;align-items:flex-start;gap:10px;">
+          <span style="font-size:20px;" id="plano-banner-icon">ℹ️</span>
+          <div style="flex:1;font-size:12px;line-height:1.5;" id="plano-banner-text">
+            <strong>¿Dónde se ubican las máquinas en el plano de Sede Levarte?</strong><br>
+            Cada computador, router, switch y terminal se ubica físicamente en su respectivo nivel arquitectónico (Zócalo / Taller Bajo Nivel, Nivel 1 Acceso Calle Levarte con Administración y Aulas 1° Medio, Nivel 2 Aulas 2° Medio y Extensión WiFi 192.168.9.x).
+          </div>
+        </div>
+      </div>
+
+      <!-- Layout Principal: Plano Arquitectónico + Detalle Lateral -->
+      <div class="plano-main-layout">
+        <!-- Contenedor del Plano Arquitectónico -->
+        <div class="plano-canvas-container" id="plano-canvas-container">
+          <div class="plano-blueprint" id="plano-blueprint-content">
+            <!-- Renderizado dinámico desde app.js -->
+          </div>
+        </div>
+
+        <!-- Panel Lateral: Información del Recinto / Máquina Seleccionada -->
+        <div class="plano-sidebar-detail" id="plano-sidebar-detail">
+          <div class="psd-card" id="psd-card">
+            <div class="psd-header">
+              <span class="psd-icon" id="psd-icon">📍</span>
+              <div style="flex:1;min-width:0;">
+                <h3 id="psd-title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Selecciona una sala o equipo</h3>
+                <span id="psd-sub" style="font-size:11px;color:#94a3b8;display:block;">Haz clic en cualquier puesto del plano</span>
+              </div>
+            </div>
+            <div class="psd-body" id="psd-body">
+              <div class="psd-placeholder">
+                <div style="font-size:36px;margin-bottom:8px;">📐</div>
+                <strong style="color:#e2e8f0;">Plano Escala 1 : 200</strong>
+                <p style="font-size:11.5px;color:#94a3b8;margin-top:4px;">Sede Patricio Lynch N° 220, Playa Ancha</p>
+                <small style="color:#64748b;display:block;margin-top:8px;">Georreferenciación de 72 equipos activos por recinto</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ VIEW: ENLACE INTER-SEDES (LYNCH ↔ LEVARTE) ══ -->
+    <div class="view" id="view-bridge">
+      <div class="view-header" style="flex-wrap:wrap;gap:12px;">
+        <div>
+          <h2>🌉 Enlace Inter-Sedes EinsNet · Comunicación Directa Lynch ↔ Levarte</h2>
+          <span style="font-size:12px;color:var(--text-3);display:block;margin-top:2px;">
+            Interconexión WAN y Canal Seguro entre Sede Patricio Lynch (3° y 4° Medio) y Sede Levarte (1° y 2° Medio)
+          </span>
+        </div>
+        <div class="view-controls">
+          <button class="btn-sm" id="btn-refresh-bridge" style="border-color:var(--cyan);color:var(--cyan)">🔄 Sincronizar Enlace</button>
+          <button class="btn-sm" id="btn-test-ping-bridge" style="border-color:#8b5cf6;color:#a78bfa;">📡 Test Latencia (Ping)</button>
+        </div>
+      </div>
+
+      <!-- Arquitectura Visual del Puente Inter-Sedes -->
+      <div class="bridge-hero-grid">
+        <!-- Tarjeta Sede Lynch -->
+        <div class="bridge-campus-card bcc-lynch">
+          <div class="bcc-badge bcc-badge-active">📍 Sede Activa (Hoy)</div>
+          <div class="bcc-header">
+            <span class="bcc-icon">🏫</span>
+            <div>
+              <h3>Sede Patricio Lynch</h3>
+              <span class="bcc-sub">Campus Central (3° y 4° Medio · Carreras Técnicas)</span>
+            </div>
+          </div>
+          <div class="bcc-details">
+            <div class="bcc-row"><span>Dirección:</span> <strong>Calle Patricio Lynch N° 220, Playa Ancha</strong></div>
+            <div class="bcc-row"><span>IP WAN Pública:</span> <strong style="color:var(--cyan);">185.234.218.4</strong></div>
+            <div class="bcc-row"><span>Subred Local:</span> <code>192.168.80.0/24</code></div>
+            <div class="bcc-row"><span>Especialidades:</span> <strong>Gastronomía, Elab. Ind., Op. Portuarias, Química, CAD</strong></div>
+            <div class="bcc-row"><span>Máquinas en Vivo:</span> <strong style="color:#10b981;" id="bridge-lynch-count">72 Equipos Vivos</strong></div>
+          </div>
+          <div class="bcc-footer">
+            <span class="pulse-green-dot"></span> Servidor Central EinsNet en Línea
+          </div>
+        </div>
+
+        <!-- Nodo Central: Túnel EinsNet Bridge -->
+        <div class="bridge-tunnel-node">
+          <div class="btn-pulse-ring"></div>
+          <span class="btn-icon">⚡</span>
+          <div class="btn-title">Túnel EinsNet Bridge</div>
+          <div class="btn-status btn-status-standby" id="bridge-tunnel-status">🟡 En Espera · Listo para Enlazar Mañana</div>
+          <div class="btn-metrics">
+            <div class="btn-metric-item">
+              <span class="bm-val" id="bridge-latency-val">-- ms</span>
+              <span class="bm-lbl">Latencia WAN</span>
+            </div>
+            <div class="btn-metric-item">
+              <span class="bm-val">AES-256</span>
+              <span class="bm-lbl">Cifrado E2E</span>
+            </div>
+            <div class="btn-metric-item">
+              <span class="bm-val" id="bridge-packets-val">0 (En espera)</span>
+              <span class="bm-lbl">Sincronizados</span>
+            </div>
+          </div>
+          <div class="btn-line-indicator">
+            <span class="btn-beam"></span>
+          </div>
+        </div>
+
+        <!-- Tarjeta Sede Levarte -->
+        <div class="bridge-campus-card bcc-levarte">
+          <div class="bcc-badge" style="background:#10b981;color:#050b18;font-weight:700;">🟢 Enlace Operativo en Vivo</div>
+          <div class="bcc-header">
+            <span class="bcc-icon">🏢</span>
+            <div>
+              <h3>Sede Levarte</h3>
+              <span class="bcc-sub">Módulo A-15 (1° y 2° Medio) · Sede Activa</span>
+            </div>
+          </div>
+          <div class="bcc-details">
+            <div class="bcc-row"><span>Dirección:</span> <strong>Calle Levarte, Playa Ancha, Valparaíso</strong></div>
+            <div class="bcc-row"><span>IP WAN Pública:</span> <strong style="color:#10b981;" id="bridge-levarte-wan">190.161.66.20 (VTR Banda Ancha)</strong></div>
+            <div class="bcc-row"><span>Subred Local:</span> <code id="bridge-levarte-lan">192.168.1.0/24 (Gateway FortiGate 192.168.1.99)</code></div>
+            <div class="bcc-row"><span>Cursos:</span> <strong>1° Medio (1°A - 1°B) y 2° Medio (2°A - 2°B)</strong></div>
+            <div class="bcc-row"><span>Máquinas en Vivo:</span> <strong style="color:#10b981;" id="bridge-levarte-count">28 Equipos Operativos (100% Detectados)</strong></div>
+          </div>
+          <div class="bcc-footer" id="bridge-levarte-footer">
+            <span class="pulse-green-dot"></span> <strong>Enlace en Vivo Activo</strong> · Conectado en puerto 8000
+          </div>
+        </div>
+      </div>
+
+      <!-- ════ GUÍA TÉCNICA DESTACADA: 3 MÉTODOS PARA CONECTAR MAÑANA EN LEVARTE ════ -->
+      <div class="bridge-guide-banner" id="bridge-guide-banner">
+        <div class="bgb-header">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:24px;">📋</span>
+            <div>
+              <h3 style="margin:0;font-size:15px;color:#f8fafc;font-weight:700;">Guía Técnica de Interconexión Lynch ↔ Levarte</h3>
+              <span style="font-size:11.5px;color:#94a3b8;">3 alternativas prácticas y sencillas para enlazar ambas sedes mañana sin complicaciones</span>
+            </div>
+          </div>
+          <span class="bgb-badge">3 ALTERNATIVAS TÉCNICAS</span>
+        </div>
+
+        <div class="bgb-cards-grid">
+          <!-- Alternativa 1 -->
+          <div class="bgb-card bgb-card-rec">
+            <div class="bgb-card-top">
+              <span class="bgb-num">1</span>
+              <div>
+                <h4>EinsNet Cloud Relay</h4>
+                <span class="bgb-tag">⭐ RECOMENDADA · MÁS FÁCIL</span>
+              </div>
+            </div>
+            <p><strong>Cero configuración de red:</strong> No requiere abrir puertos en routers ni tocar el Firewall Fortinet. Ambas sedes sincronizan a través del servidor web seguro de EinsNet.</p>
+            <div class="bgb-steps">
+              <div class="bgb-step"><strong>Paso 1:</strong> En Lynch, deja corriendo <code>Iniciar_Servidor.bat</code> en el equipo central.</div>
+              <div class="bgb-step"><strong>Paso 2:</strong> Mañana en Levarte, conecta tu laptop/PC a la red local de Levarte.</div>
+              <div class="bgb-step"><strong>Paso 3:</strong> Abre el navegador en el enlace web compartido o ejecuta <code>Iniciar_Agente_Windows.bat</code>.</div>
+            </div>
+          </div>
+
+          <!-- Alternativa 2 -->
+          <div class="bgb-card">
+            <div class="bgb-card-top">
+              <span class="bgb-num">2</span>
+              <div>
+                <h4>Malla Privada VPN (Tailscale)</h4>
+                <span class="bgb-tag" style="background:#8b5cf6;color:#fff;">GRATIS · CIFRADO DIRECTO</span>
+              </div>
+            </div>
+            <p><strong>Red virtual unificada:</strong> Une Lynch y Levarte como si estuvieran conectadas al mismo switch, con túnel encriptado WireGuard de punto a punto sin tocar routers.</p>
+            <div class="bgb-steps">
+              <div class="bgb-step"><strong>Paso 1:</strong> Instalas Tailscale en el PC servidor de Lynch (toma 2 min).</div>
+              <div class="bgb-step"><strong>Paso 2:</strong> Instalas Tailscale en el PC/Laptop que lleves mañana a Levarte.</div>
+              <div class="bgb-step"><strong>Paso 3:</strong> Ambas sedes se comunican por IP privada segura <code>100.x.x.x</code> con cifrado total.</div>
+            </div>
+          </div>
+
+          <!-- Alternativa 3 -->
+          <div class="bgb-card">
+            <div class="bgb-card-top">
+              <span class="bgb-num">3</span>
+              <div>
+                <h4>Enlace IP WAN Directo</h4>
+                <span class="bgb-tag" style="background:#38bdf8;color:#050b18;">TRADICIONAL</span>
+              </div>
+            </div>
+            <p><strong>Conexión directa por Internet:</strong> Usas la IP pública fija de Lynch (<code>185.234.218.4</code>) con reenvío de puerto hacia el servidor EinsNet.</p>
+            <div class="bgb-steps">
+              <div class="bgb-step"><strong>Paso 1:</strong> En el Fortinet de Lynch, solicitar abrir/reenviar el puerto <code>8080</code> al servidor local.</div>
+              <div class="bgb-step"><strong>Paso 2:</strong> En Levarte, abrir en navegador <code>http://185.234.218.4:8080</code>.</div>
+              <div class="bgb-step"><strong>Paso 3:</strong> Conexión directa establecida entre ambas sedes escolares.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Layout Dual: Chat Inter-Sedes + Alertas de Emergencia Simultáneas -->
+      <div class="bridge-content-grid">
+        <!-- Columna Izquierda: Chat / Intercomunicador Directo Inter-Sedes -->
+        <div class="bridge-chat-card">
+          <div class="bcc-card-header">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:18px;">💬</span>
+              <div>
+                <h3 style="font-size:14px;color:#e2e8f0;">Canal de Intercomunicación Directa Inter-Sedes</h3>
+                <span style="font-size:11px;color:#94a3b8;">Mensajes instantáneos entre Administradores y Docentes de ambas sedes</span>
+              </div>
+            </div>
+            <span class="bridge-badge-live">EN VIVO</span>
+          </div>
+
+          <!-- Feed de Mensajes -->
+          <div class="bridge-chat-feed" id="bridge-chat-feed">
+            <!-- Mensajes inyectados dinámicamente -->
+          </div>
+
+          <!-- Formulario de Envío Inter-Sede -->
+          <form class="bridge-chat-form" id="bridge-chat-form">
+            <div class="bcf-row-top">
+              <div class="bcf-control">
+                <label>Desde:</label>
+                <select id="bridge-msg-from" class="bcf-select">
+                  <option value="lynch">📍 Sede Lynch (Soporte TI / Rectoría)</option>
+                  <option value="levarte">📍 Sede Levarte (Inspectoría / Docentes)</option>
+                </select>
+              </div>
+              <div class="bcf-control">
+                <label>Destino:</label>
+                <select id="bridge-msg-to" class="bcf-select">
+                  <option value="both">📢 Ambas Sedes (Difusión Bisede)</option>
+                  <option value="levarte">📍 Hacia Sede Levarte</option>
+                  <option value="lynch">📍 Hacia Sede Lynch</option>
+                </select>
+              </div>
+            </div>
+            <div class="bcf-row-input">
+              <input type="text" id="bridge-msg-input" placeholder="Escribe un mensaje o aviso para la otra sede..." autocomplete="off" required/>
+              <button type="submit" class="bcf-send-btn">
+                <span>Enviar</span> ✈️
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Columna Derecha: Alertas Bisede y Opciones de Enlace -->
+        <div class="bridge-actions-col">
+          <!-- Tarjeta de Emisión de Alertas Simultáneas -->
+          <div class="bridge-actions-card">
+            <div class="bcc-card-header">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:18px;">🚨</span>
+                <div>
+                  <h3 style="font-size:14px;color:#ef4444;">Emisión Simultánea Bisede (Sirena Masiva)</h3>
+                  <span style="font-size:11px;color:#94a3b8;">Suena en los parlantes y pantallas de Lynch y Levarte al unísono</span>
+                </div>
+              </div>
+            </div>
+            <div class="bridge-quick-alerts">
+              <button type="button" class="bqa-btn bqa-evac" data-alert-type="tsunami">
+                <span class="bqa-icon">🌊</span>
+                <div class="bqa-text">
+                  <strong>Simulacro / Evacuación Tsunami</strong>
+                  <small>Alerta general para Playa Ancha (Lynch y Levarte)</small>
+                </div>
+              </button>
+              <button type="button" class="bqa-btn bqa-rectoria" data-alert-type="rectoria">
+                <span class="bqa-icon">📢</span>
+                <div class="bqa-text">
+                  <strong>Convocatoria General Docente</strong>
+                  <small>Aviso de Rectoría para profesores de ambas sedes</small>
+                </div>
+              </button>
+              <button type="button" class="bqa-btn bqa-power" data-alert-type="corte">
+                <span class="bqa-icon">⚡</span>
+                <div class="bqa-text">
+                  <strong>Aviso de Contingencia / Corte</strong>
+                  <small>Notificación de corte de energía o internet</small>
+                </div>
+              </button>
+              <button type="button" class="bqa-btn bqa-bell" data-alert-type="timbre">
+                <span class="bqa-icon">🔔</span>
+                <div class="bqa-text">
+                  <strong>Toque de Timbre / Salida de Clases</strong>
+                  <small>Sincronización de cambio de bloque horario</small>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Guía de Conexión y Opciones para Mañana -->
+          <div class="bridge-options-card">
+            <div class="bcc-card-header">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:18px;">🛠️</span>
+                <div>
+                  <h3 style="font-size:13.5px;color:#38bdf8;">Cómo Comunicar Ambas Sedes Mañana</h3>
+                  <span style="font-size:11px;color:#94a3b8;">3 métodos prácticos sin tocar routers de proveedores</span>
+                </div>
+              </div>
+            </div>
+            <div class="bridge-methods-list">
+              <div class="bml-item">
+                <div class="bml-title">
+                  <span class="bml-num">1</span>
+                  <strong>EinsNet Cloud Relay (Recomendado · Listo hoy)</strong>
+                </div>
+                <p>Las dos sedes se comunican a través del sincronizador web de EinsNet. No requiere abrir puertos ni permisos en el firewall Fortinet.</p>
+              </div>
+              <div class="bml-item">
+                <div class="bml-title">
+                  <span class="bml-num">2</span>
+                  <strong>Malla Cifrada VPN (Tailscale / Cloudflare Tunnel)</strong>
+                </div>
+                <p>Instalas un cliente en Lynch y uno en Levarte: une ambas redes como si estuvieran en el mismo piso con IP segura.</p>
+              </div>
+              <div class="bml-item">
+                <div class="bml-title">
+                  <span class="bml-num">3</span>
+                  <strong>Enlace IP WAN Directo</strong>
+                </div>
+                <p>Usa la IP WAN <code>185.234.218.4</code> con reenvío de puerto hacia el servidor central.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+</main>
+
+<!-- ═══════════════ TERMINAL FLOTANTE ═══════════════ -->
+<div id="terminal-panel" class="term-hidden">
+  <div id="terminal-header">
+    <span class="term-title">&#x25A0; EinsNet Terminal</span>
+    <div style="display:flex;gap:8px;align-items:center">
+      <select id="term-target" class="term-select"></select>
+      <button class="term-btn" id="term-clear">Limpiar</button>
+      <button class="term-btn" id="term-close">&#x2715;</button>
+    </div>
+  </div>
+  <div id="terminal-output"></div>
+  <div id="terminal-input-row">
+    <span class="term-prompt" id="term-prompt">eins@red $</span>
+    <input type="text" id="terminal-input" placeholder="ping 192.168.80.1 | tracert | scan | help" autocomplete="off" spellcheck="false"/>
+  </div>
+</div>
+
+<!-- Floating Router Context Menu on Canvas -->
+<div id="map-router-context-menu" class="router-context-menu hidden">
+  <div class="rcm-header">
+    <span class="rcm-icon">📡</span>
+    <div class="rcm-titles">
+      <strong id="rcm-router-name">ASUS-Router-14</strong>
+      <span id="rcm-router-ip" class="mono">192.168.80.14</span>
+    </div>
+  </div>
+  <div class="rcm-body">
+    <button class="rcm-item rcm-item-alert" id="rcm-btn-broadcast">
+      <span>🚨</span>
+      <div class="rcm-item-text">
+        <strong>Enviar Mensaje Masivo</strong>
+        <small id="rcm-devices-count">Difusión urgente a este grupo</small>
+      </div>
+    </button>
+    <button class="rcm-item" id="rcm-btn-toggle-branch">
+      <span>📂</span>
+      <div class="rcm-item-text">
+        <strong id="rcm-toggle-label">Desplegar / Colapsar Rama</strong>
+        <small>Mostrar u ocultar máquinas dependientes</small>
+      </div>
+    </button>
+    <button class="rcm-item" id="rcm-btn-scan">
+      <span>🔍</span>
+      <div class="rcm-item-text">
+        <strong>Escanear Puertos del Router</strong>
+        <small>Auditoría rápida de servicios</small>
+      </div>
+    </button>
+    <button class="rcm-item" id="rcm-btn-details">
+      <span>📋</span>
+      <div class="rcm-item-text">
+        <strong>Ver Ficha de Dispositivos</strong>
+        <small>Abrir panel lateral de telemetría</small>
+      </div>
+    </button>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<!-- Modal de Advertencia Previa y Bloqueo -->
+<div class="modal-overlay hidden" id="block-modal">
+  <div class="modal modal-warn-block">
+    <div class="wbm-header">
+      <div class="wbm-title-group">
+        <span class="wbm-icon">🛡️</span>
+        <div>
+          <h3>Protocolo de Advertencia y Bloqueo de Red</h3>
+          <span class="wbm-subtitle">Envía una advertencia administrativa previa y decide aislar o mantener el host</span>
+        </div>
+      </div>
+      <button class="modal-close-btn" id="btn-block-close">✕</button>
+    </div>
+
+    <!-- Info del dispositivo destino -->
+    <div class="wbm-target-card">
+      <div class="wbm-target-icon" id="block-target-icon">💻</div>
+      <div class="wbm-target-details">
+        <div class="wbm-target-top">
+          <strong id="block-target-name">Host</strong>
+          <span class="wbm-target-ip mono" id="block-target-ip">0.0.0.0</span>
+          <span class="risk-badge" id="block-target-threat">LIMPIO</span>
+        </div>
+        <div class="wbm-target-meta">
+          <span>MAC: <code id="block-target-mac">00:00:00:00:00:00</code></span>
+          <span>VLAN: <span id="block-target-vlan">1</span></span>
+          <span>Subred: <span id="block-target-segment">192.168.80.x</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Canal de envío del mensaje -->
+    <div class="wbm-section">
+      <label class="wbm-label">📡 Canal de transmisión de la advertencia:</label>
+      <div class="wbm-channels">
+        <label class="wbm-channel-opt">
+          <input type="radio" name="warn-channel" value="win_msg" checked>
+          <span class="wbm-ch-content">
+            <strong>🖥️ Windows MSG / Net Send</strong>
+            <small>Ventana emergente directa en el escritorio del usuario</small>
+          </span>
+        </label>
+        <label class="wbm-channel-opt">
+          <input type="radio" name="warn-channel" value="captive_portal">
+          <span class="wbm-ch-content">
+            <strong>🌐 Portal Cautivo HTTP</strong>
+            <small>Redirección forzada de navegador con pantalla de aviso</small>
+          </span>
+        </label>
+        <label class="wbm-channel-opt">
+          <input type="radio" name="warn-channel" value="syslog">
+          <span class="wbm-ch-content">
+            <strong>📋 Syslog / Registro Router</strong>
+            <small>Evento de seguridad al router Fortinet y consola del admin</small>
+          </span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Mensaje personalizado y Chips de plantillas -->
+    <div class="wbm-section">
+      <div class="wbm-label-row">
+        <label class="wbm-label" for="block-warn-text">✏️ Mensaje de advertencia personalizado (puedes escribir lo que quieras):</label>
+      </div>
+
+      <!-- Chips de plantillas rápidas -->
+      <div class="wbm-chips-row">
+        <button type="button" class="wbm-chip" data-preset="unauthorized">⚡ Tráfico no autorizado</button>
+        <button type="button" class="wbm-chip" data-preset="bandwidth">📶 Consumo excesivo</button>
+        <button type="button" class="wbm-chip" data-preset="malware">🛡️ Sospecha de malware/C2</button>
+        <button type="button" class="wbm-chip" data-preset="offhours">🕒 Horario no permitido</button>
+      </div>
+
+      <textarea id="block-warn-text" class="wbm-textarea" rows="3" placeholder="Escribe aquí tu advertencia personalizada antes de bloquear..."></textarea>
+    </div>
+
+    <!-- Vista previa en tiempo real -->
+    <div class="wbm-preview-box">
+      <div class="wbm-preview-label">👁️ Vista previa del mensaje que recibirá el usuario:</div>
+      <div class="wbm-preview-content" id="block-warn-preview">
+        "Aviso del Administrador: Su equipo ha sido advertido por las políticas de seguridad de la red."
+      </div>
+    </div>
+
+    <!-- Diagnóstico y Estado de Transmisión Real en Red LAN -->
+    <div id="wbm-real-diag" class="wbm-diag-box hidden">
+      <div class="wbm-diag-header">
+        <span class="wbm-diag-badge" id="wbm-diag-status">📡 Auditoría y Transmisión Real LAN</span>
+        <span class="wbm-diag-time" id="wbm-diag-time">10:00:00</span>
+      </div>
+      <div id="wbm-diag-content" class="wbm-diag-content"></div>
+    </div>
+
+    <!-- Acciones -->
+    <div class="wbm-actions">
+      <button class="btn-wbm warn-block" id="btn-warn-and-block" title="Transmite tu mensaje y aisla inmediatamente el equipo">
+        📨 Enviar Advertencia y Bloquear
+      </button>
+      <button class="btn-wbm warn-only" id="btn-warn-only" title="Envía tu mensaje como advertencia pero déjalo conectado">
+        ⚠️ Enviar Solo Advertencia (Sin Bloquear)
+      </button>
+      <button class="btn-wbm block-silent" id="btn-block-silent" title="Bloquea el host sin enviarle ningún mensaje previo">
+        🚫 Bloqueo Silencioso
+      </button>
+      <button class="btn-wbm cancel" id="btn-block-cancel">
+        Cancelar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ MODAL DE EVACUACIÓN Y EMERGENCIA GENERAL ═══════════════ -->
+<div id="emergency-modal" class="modal-overlay hidden">
+  <div class="emergency-modal-card">
+    <div class="emergency-modal-header">
+      <div class="emergency-header-title">
+        <span class="emergency-icon-flash">🚨</span>
+        <div>
+          <h3>EMISIÓN DE ALERTA GENERAL &amp; EVACUACIÓN</h3>
+          <p>Difusión masiva simultánea a todos los puestos y terminales de la red LAN</p>
+        </div>
+      </div>
+      <button class="modal-close" id="btn-emergency-close">&times;</button>
+    </div>
+
+    <div class="emergency-modal-body">
+      <!-- Selector de Tipo de Emergencia / Chips Rápidos -->
+      <div class="em-section">
+        <label class="em-label">⚠️ Tipo de Alerta / Evento de Emergencia:</label>
+        <div class="emergency-chips-row">
+          <button type="button" class="em-chip" data-preset="direct" data-title="💬 MENSAJE DE ADMINISTRACIÓN TI" data-desc="Hola, por favor ponte en contacto con Soporte TI / Administración cuando te sea posible.">💬 Mensaje Directo</button>
+          <button type="button" class="em-chip" data-preset="notice" data-title="🛠️ AVISO DE MANTENIMIENTO TÉCNICO" data-desc="Se realizará un mantenimiento programado en tu equipo. Por favor guarda tus archivos y documentos de trabajo.">🛠️ Mantenimiento TI</button>
+          <button type="button" class="em-chip active" data-preset="evacuate" data-title="🚨 ALERTA DE EVACUACIÓN INMEDIATA" data-desc="Se ha ordenado la EVACUACIÓN INMEDIATA de las instalaciones. Suspenda sus actividades, conserve la calma y diríjase ordenadamente hacia las zonas seguras o salidas de emergencia.">🚨 Evacuación Inmediata</button>
+          <button type="button" class="em-chip" data-preset="fire" data-title="🔥 ALERTA DE INCENDIO" data-desc="Se ha detectado peligro o foco de INCENDIO en las instalaciones. Evacúe de inmediato por las vías de escape señalizadas. NO use ascensores bajo ninguna circunstancia.">🔥 Conato / Incendio</button>
+          <button type="button" class="em-chip" data-preset="quake" data-title="⚠️ ALERTA DE SISMO / TERREMOTO" data-desc="SISMO EN PROCESO: Mantenga la calma, protéjase bajo estructuras firmes y aléjese de ventanales. Al terminar el movimiento, proceda a evacuar hacia las zonas de seguridad.">⚠️ Sismo / Terremoto</button>
+          <button type="button" class="em-chip" data-preset="power" data-title="⚡ CORTE ELÉCTRICO INMINENTE" data-desc="Corte inminente de suministro eléctrico y conmutación de grupos electrógenos. Guarde sus documentos de trabajo de inmediato y apague equipos no esenciales.">⚡ Corte Eléctrico / UPS</button>
+          <button type="button" class="em-chip" data-preset="drill" data-title="📢 SIMULACRO DE EVACUACIÓN" data-desc="ATENCIÓN: Se da inicio al SIMULACRO OFICIAL DE EVACUACIÓN. Proceda según el protocolo establecido hacia su punto de encuentro asignado.">📢 Simulacro de Evacuación</button>
+          <button type="button" class="em-chip" data-preset="lockdown" data-title="🛑 PROTOCOLO DE SEGURIDAD / LOCKDOWN" data-desc="ALERTA PERIMETRAL: Permanezca dentro de su oficina o área asignada, cierre puertas y mantenga el silencio hasta nuevo aviso oficial.">🛑 Seguridad / Lockdown</button>
+          <button type="button" class="em-chip" data-preset="custom" data-title="🛑 AVISO PERSONALIZADO" data-desc="">✏️ Personalizado</button>
+        </div>
+      </div>
+
+      <!-- Título y Mensaje editable -->
+      <div class="em-section">
+        <label class="em-label" for="emergency-title-input">🏷️ Título de la Alarma:</label>
+        <input type="text" id="emergency-title-input" class="emergency-input" value="🚨 ALERTA DE EVACUACIÓN INMEDIATA" placeholder="Título de la alerta..."/>
+      </div>
+
+      <div class="em-section">
+        <label class="em-label" for="emergency-msg-input">📢 Instrucciones / Mensaje a transmitir (todos los equipos lo recibirán de forma prioritaria):</label>
+        <textarea id="emergency-msg-input" class="emergency-textarea" rows="4" placeholder="Escriba el mensaje urgente de evacuación o aviso para toda la red...">Se ha ordenado la EVACUACIÓN INMEDIATA de las instalaciones. Suspenda sus actividades, conserve la calma y diríjase ordenadamente hacia las zonas seguras o salidas de emergencia.</textarea>
+      </div>
+
+      <!-- Canales y Alcance -->
+      <div class="em-grid-controls">
+        <div class="em-box-channel">
+          <div class="em-box-title">📡 Canales de Difusión Simultáneos:</div>
+          <label class="em-check-label">
+            <input type="checkbox" id="chk-em-winmsg" checked disabled>
+            <span><strong>🖥️ Ventana Nativa Windows</strong> (Popup persistente <code>msg * /SERVER:&lt;IP&gt; /TIME:0</code> sin tiempo de cierre)</span>
+          </label>
+          <label class="em-check-label">
+            <input type="checkbox" id="chk-em-linux" checked disabled>
+            <span><strong>🐧 Linux &amp; Unix Terminals</strong> (Broadcast UDP puerto 8888 hacia <code>wall</code>, <code>zenity</code> &amp; <code>notify-send</code>)</span>
+          </label>
+          <label class="em-check-label">
+            <input type="checkbox" id="chk-em-webportal" checked disabled>
+            <span><strong>🌐 Portal Web de Alerta Roja</strong> (<code>/alerta?emergency=1</code> con sirena audio y pantalla completa)</span>
+          </label>
+        </div>
+
+        <div class="em-box-scope">
+          <div class="em-box-title">🎯 Destino de la Transmisión:</div>
+          <select id="emergency-scope" class="emergency-select">
+            <optgroup label="🌐 Ámbitos Generales">
+              <option value="all" selected>🌐 Toda la Red (Todos los Hosts y Equipos Conectados)</option>
+              <option value="online">🟢 Solo Equipos Activos / Online detectados</option>
+              <option value="main">🏢 Sede Principal (Subred 192.168.80.x)</option>
+            </optgroup>
+            <optgroup label="📡 Subredes y Grupos por Router" id="emergency-scope-routers">
+              <!-- Dynamically populated with all routers and their equipment -->
+            </optgroup>
+            <optgroup label="🎯 Mensaje Directo a un Solo Equipo" id="emergency-scope-single">
+              <!-- Dynamically populated with all individual machines -->
+            </optgroup>
+          </select>
+
+          <!-- Vista de Equipos Destinatarios del Grupo Seleccionado -->
+          <div class="em-target-preview-box" id="em-target-preview-box">
+            <div class="em-target-preview-header">
+              <span class="em-target-preview-title" id="em-target-count-title">🎯 Equipos destinatarios (0):</span>
+              <div class="em-target-quick-btns">
+                <button type="button" class="btn-target-mini" id="btn-target-select-all">Todos</button>
+                <button type="button" class="btn-target-mini" id="btn-target-select-none">Ninguno</button>
+              </div>
+            </div>
+            <div class="em-target-chips-container" id="em-target-chips-container">
+              <!-- Dynamically populated cards of target machines -->
+            </div>
+            <div class="em-target-summary-bar" id="em-target-summary-bar">
+              <span id="em-target-summary-text">Cargando equipos destinatarios...</span>
+            </div>
+          </div>
+
+          <div class="em-siren-toggle">
+            <label class="em-check-label em-highlight">
+              <input type="checkbox" id="chk-em-siren" checked>
+              <span>🔊 Reproducir Sirena Acústica en el Panel de Control</span>
+            </label>
+          </div>
+          <div class="em-siren-actions">
+            <button type="button" class="btn-siren-test" id="btn-siren-test">▶️ Probar Sirena</button>
+            <button type="button" class="btn-siren-stop hidden" id="btn-siren-stop">⏹️ Silenciar Sirena</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Broadcast Diag Log -->
+      <div id="emergency-diag-box" class="emergency-diag-box hidden">
+        <div class="emergency-diag-header">
+          <span class="emergency-diag-status" id="emergency-diag-status">📡 Transmitiendo Alerta Masiva...</span>
+          <span class="emergency-diag-time" id="emergency-diag-time"></span>
+        </div>
+        <div id="emergency-diag-content" class="emergency-diag-content"></div>
+      </div>
+    </div>
+
+    <div class="emergency-modal-footer">
+      <button class="btn-em-cancel" id="btn-emergency-cancel">Cerrar</button>
+      <button class="btn-em-transmit" id="btn-emergency-transmit">
+        <span class="em-btn-icon">🚨</span> EMITIR ALERTA Y EVACUACIÓN AHORA
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Añadir Host Manualmente a la Red -->
+<div class="modal-overlay hidden" id="modal-add-host">
+  <div class="modal" style="max-width:540px;background:#0d1527;border:1px solid var(--cyan);box-shadow:0 0 40px rgba(0,245,255,0.25);border-radius:12px;padding:24px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:24px;">➕</span>
+        <div>
+          <h3 style="margin:0;font-size:16px;font-weight:700;color:var(--cyan);">Añadir Dispositivo / Host a la Red</h3>
+          <span style="font-size:12px;color:var(--text-3);">Incorpora cualquier IP activa en la LAN o en routers dependientes</span>
+        </div>
+      </div>
+      <button class="modal-close-btn" id="btn-add-host-close" style="background:none;border:none;color:var(--text-3);font-size:18px;cursor:pointer;">✕</button>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div>
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:6px;">Dirección IP del Equipo *</label>
+        <input type="text" id="add-host-ip" class="form-input mono" placeholder="ej. 192.168.14.182" style="width:100%;box-sizing:border-box;background:#080c14;border:1px solid #1e293b;border-radius:6px;padding:9px 12px;color:var(--cyan);font-size:14px;font-weight:bold;">
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:6px;">Nombre / Identificador</label>
+          <input type="text" id="add-host-name" class="form-input" placeholder="ej. Terminal-ASUS-182" style="width:100%;box-sizing:border-box;background:#080c14;border:1px solid #1e293b;border-radius:6px;padding:9px 12px;color:#f8fafc;font-size:13px;">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:6px;">Tipo de Dispositivo</label>
+          <select id="add-host-type" class="form-select" style="width:100%;box-sizing:border-box;background:#080c14;border:1px solid #1e293b;border-radius:6px;padding:9px 12px;color:#f8fafc;font-size:13px;">
+            <option value="pc">💻 Computadora / Estación</option>
+            <option value="server">🖥️ Servidor / Nodo</option>
+            <option value="printer">🖨️ Impresora / Plotter</option>
+            <option value="router">🌐 Router / Sub-Switch</option>
+            <option value="unknown">❓ Desconocido / IoT</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:6px;">Router / Gateway de Dependencia</label>
+        <select id="add-host-bridge" class="form-select mono" style="width:100%;box-sizing:border-box;background:#080c14;border:1px solid #1e293b;border-radius:6px;padding:9px 12px;color:#38bdf8;font-size:13px;">
+        </select>
+        <span id="add-host-hint" style="font-size:11px;color:var(--green);display:block;margin-top:4px;">Auto-asociado por subred (ej: 192.168.14.x → ASUS-Router-14)</span>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:6px;">Dirección MAC (Opcional)</label>
+          <input type="text" id="add-host-mac" class="form-input mono" placeholder="ej. FC:34:97:88:14:B6" style="width:100%;box-sizing:border-box;background:#080c14;border:1px solid #1e293b;border-radius:6px;padding:9px 12px;color:var(--text-2);font-size:12px;">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:6px;">Fabricante / Vendor</label>
+          <input type="text" id="add-host-vendor" class="form-input" placeholder="ej. ASUSTeK COMPUTER INC." style="width:100%;box-sizing:border-box;background:#080c14;border:1px solid #1e293b;border-radius:6px;padding:9px 12px;color:var(--text-2);font-size:12px;">
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;border-top:1px solid rgba(255,255,255,0.08);padding-top:16px;">
+      <button class="btn-sm" id="btn-add-host-cancel" style="padding:8px 14px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:6px;cursor:pointer;">Cancelar</button>
+      <button class="btn-sm" id="btn-add-host-confirm" style="padding:8px 18px;background:var(--cyan);border:none;color:#0a0e17;font-weight:700;border-radius:6px;cursor:pointer;">➕ Incorporar al Mapa</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Ranking de Consumo y Actividad LAN -->
+<div class="modal-overlay hidden" id="modal-ranking">
+  <div class="modal" style="max-width:760px;background:#0d1527;border:1px solid #f59e0b;box-shadow:0 0 50px rgba(245,158,11,0.25);border-radius:14px;padding:24px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span style="font-size:28px;">📊</span>
+        <div>
+          <h3 style="margin:0;font-size:17px;font-weight:700;color:#f59e0b;">Ranking de Consumo y Actividad en Red</h3>
+          <span style="font-size:12px;color:var(--text-3);">Identifica quién trabaja más y consume mayor ancho de banda en la red escolar</span>
+        </div>
+      </div>
+      <button class="modal-close-btn" id="btn-ranking-close" style="background:none;border:none;color:var(--text-3);font-size:20px;cursor:pointer;">✕</button>
+    </div>
+
+    <!-- Ranking Metrics Summary -->
+    <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:10px;margin-bottom:16px;">
+      <div style="background:#091224;border:1px solid #1e293b;border-radius:8px;padding:12px;">
+        <span style="font-size:11px;color:var(--text-3);display:block;">Mayor Consumidor</span>
+        <strong id="rank-top-host" style="color:#00f5ff;font-size:14px;">Calculando...</strong>
+      </div>
+      <div style="background:#091224;border:1px solid #1e293b;border-radius:8px;padding:12px;">
+        <span style="font-size:11px;color:var(--text-3);display:block;">Tráfico Total Transferido</span>
+        <strong id="rank-total-bandwidth" style="color:#10b981;font-size:14px;">0 MB</strong>
+      </div>
+      <div style="background:#091224;border:1px solid #1e293b;border-radius:8px;padding:12px;">
+        <span style="font-size:11px;color:var(--text-3);display:block;">Equipos Vivos Analizados</span>
+        <strong id="rank-active-count" style="color:#f59e0b;font-size:14px;">0 Equipos</strong>
+      </div>
+    </div>
+
+    <div class="table-wrapper" style="max-height:360px;overflow-y:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:45px;text-align:center;">#</th>
+            <th>Dispositivo / Equipo</th>
+            <th style="width:115px;">IP</th>
+            <th>Nivel de Trabajo / Actividad</th>
+            <th style="width:90px;">Bajada (RX)</th>
+            <th style="width:90px;">Subida (TX)</th>
+            <th style="width:100px;">Total Datos</th>
+            <th style="width:70px;">Ping</th>
+          </tr>
+        </thead>
+        <tbody id="ranking-tbody">
+          <tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text-3);">Calculando telemetría en vivo...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;margin-top:16px;border-top:1px solid rgba(255,255,255,0.08);padding-top:12px;">
+      <button class="btn-sm" id="btn-ranking-ok" style="padding:8px 20px;background:#f59e0b;border:none;color:#0a0e17;font-weight:700;border-radius:6px;cursor:pointer;">Cerrar</button>
+    </div>
+</div>
+
+<!-- ══ MODAL: MAPEO DE REDES SUBYUGADAS AL ROUTER PRINCIPAL ══ -->
+<div class="modal-overlay hidden" id="modal-subyugadas">
+  <div class="modal" style="max-width:880px;background:#0b1324;border:1px solid #38bdf8;box-shadow:0 0 50px rgba(56,189,248,0.3);border-radius:16px;padding:26px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span style="font-size:30px;">🌐</span>
+        <div>
+          <h3 style="margin:0;font-size:18px;font-weight:700;color:#38bdf8;">Mapeo de Redes Subyugadas al Router Principal · Sede Levarte</h3>
+          <span style="font-size:12px;color:var(--text-3);">Infraestructura, VLANs y Topología Física dependientes de FortiGate (192.168.1.99) · Módulo A-15</span>
+        </div>
+      </div>
+      <button class="modal-close-btn" id="btn-subyugadas-close" style="background:none;border:none;color:var(--text-3);font-size:20px;cursor:pointer;">✕</button>
+    </div>
+
+    <!-- Summary KPI Cards -->
+    <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:10px;margin-bottom:16px;">
+      <div style="background:#060d1b;border:1px solid #1e293b;border-radius:8px;padding:12px;">
+        <span style="font-size:11px;color:#94a3b8;display:block;">Router Principal</span>
+        <strong style="color:#38bdf8;font-size:13.5px;">FortiGate (.99)</strong>
+        <span style="font-size:10px;color:#64748b;display:block;">Puertos 80, 443 · DHCP/FW</span>
+      </div>
+      <div style="background:#060d1b;border:1px solid #1e293b;border-radius:8px;padding:12px;">
+        <span style="font-size:11px;color:#94a3b8;display:block;">Switch de Distribución</span>
+        <strong style="color:#a78bfa;font-size:13.5px;">Web Switch (.253)</strong>
+        <span style="font-size:10px;color:#64748b;display:block;">Puertos 22, 80, 443 · Trunk L2</span>
+      </div>
+      <div style="background:#060d1b;border:1px solid #1e293b;border-radius:8px;padding:12px;">
+        <span style="font-size:11px;color:#94a3b8;display:block;">IP Pública WAN</span>
+        <strong style="color:#10b981;font-size:13.5px;">190.161.66.20</strong>
+        <span style="font-size:10px;color:#64748b;display:block;">VTR BANDA ANCHA S.A.</span>
+      </div>
+      <div style="background:#060d1b;border:1px solid #1e293b;border-radius:8px;padding:12px;">
+        <span style="font-size:11px;color:#94a3b8;display:block;">Equipos Mapeados</span>
+        <strong style="color:#f59e0b;font-size:13.5px;">28 Equipos Vivos</strong>
+        <span style="font-size:10px;color:#64748b;display:block;">100% Detectados por ARP/Ping</span>
+      </div>
+    </div>
+
+    <!-- Subnets and Segmented Trees -->
+    <div style="display:flex;gap:12px;margin-bottom:12px;">
+      <div class="suby-card" style="flex:1;background:#091224;border:1px solid rgba(56,189,248,0.25);border-radius:10px;padding:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <strong style="color:#38bdf8;font-size:13px;">🏢 Segmentos Subyugados al Router Principal:</strong>
+          <span style="font-size:11px;color:#10b981;font-weight:600;">Subred LAN 192.168.1.0/24</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:8px;font-size:11.5px;">
+          <div style="background:#0f172a;padding:8px 10px;border-radius:6px;border-left:3px solid #0ea5e9;">
+            <strong style="color:#38bdf8;">1. Core & Gestión TI:</strong><br>
+            <span style="color:#94a3b8;">• FortiGate GW: <code>192.168.1.99</code><br>• Web Switch: <code>192.168.1.253</code><br>• maritimo Admin TI: <code>192.168.1.130</code></span>
+          </div>
+          <div style="background:#0f172a;padding:8px 10px;border-radius:6px;border-left:3px solid #10b981;">
+            <strong style="color:#34d399;">2. Administración & Inspectoría:</strong><br>
+            <span style="color:#94a3b8;">• SubDirección: <code>.111</code> · Inspectoría: <code>.115</code><br>• Secretaría: <code>.118</code> · Coordinación Karlita: <code>.125</code><br>• Docentes Profesores: <code>.119</code>, <code>.136 (RDP)</code></span>
+          </div>
+          <div style="background:#0f172a;padding:8px 10px;border-radius:6px;border-left:3px solid #a78bfa;">
+            <strong style="color:#c084fc;">3. Aulas 1° y 2° Medio (Módulo A-15):</strong><br>
+            <span style="color:#94a3b8;">• 1° Medio A/B: <code>.112, .114, .116, .117, .120</code><br>• 2° Medio A/B: <code>.121, .123, .124, .128, .129</code></span>
+          </div>
+          <div style="background:#0f172a;padding:8px 10px;border-radius:6px;border-left:3px solid #f59e0b;">
+            <strong style="color:#fbbf24;">4. Talleres, CCTV & Biometría:</strong><br>
+            <span style="color:#94a3b8;">• Impresora HP PageWide: <code>.162</code><br>• Biométrico ZKTeco: <code>.201</code> · Cámara CCTV: <code>.126</code><br>• Taller Bajo Nivel: <code>.131, .132, .135, .137, .139, .230</code></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Inter-Sedes WAN Link Status -->
+    <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.3);border-radius:8px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:22px;">🌉</span>
+        <div style="font-size:12px;">
+          <strong style="color:#34d399;">Túnel WAN Enlace Inter-Sedes EinsNet Activo:</strong><br>
+          <span style="color:#94a3b8;">Sede Levarte (<code>190.161.66.20</code> / LAN <code>192.168.1.0/24</code>) ⟷ Sede Lynch (<code>185.234.218.4</code> / LAN <code>192.168.80.0/24</code>)</span>
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <span style="background:#10b981;color:#050b18;font-weight:700;font-size:11px;padding:3px 8px;border-radius:12px;">🟢 CONECTADO</span>
+        <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Latencia: 12.3 ms · Puerto 8000</div>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;gap:10px;border-top:1px solid rgba(255,255,255,0.08);padding-top:14px;">
+      <button class="btn-sm" id="btn-export-subyugadas" style="border-color:#38bdf8;color:#38bdf8;">📋 Copiar Informe de Red</button>
+      <button class="btn-sm" id="btn-subyugadas-ok" style="padding:8px 20px;background:#38bdf8;border:none;color:#0a0e17;font-weight:700;border-radius:6px;cursor:pointer;">Entendido</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js?v=5.6"></script>
+<script src="alerts.js?v=5.3"></script>
+<script src="scanner_pro.js?v=5.3"></script>
+<script src="soc.js?v=5.3"></script>
+</body>
+</html>

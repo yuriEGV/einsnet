@@ -1,0 +1,121 @@
+{
+  "timestamp": "2026-10-08 10:58:40",
+  "scanned_subnet": "192.168.1.0/24",
+  "wan_info": {
+    "public_ip": "190.161.66.20",
+    "org": "VTR BANDA ANCHA S.A.",
+    "city": "Santiago",
+    "country": "Chile"
+  },
+  "arp_table": [
+    {
+      "ip": "192.168.1.99",
+      "mac": "E0:23:FF:36:E1:55",
+      "type": "din",
+      "source": "arp_cache"
+    },
+    {
+      "ip": "192.168.1.128",
+      "mac": "C0:25:E9:4F:9B:A1",
+      "type": "din",
+      "source": "arp_cache"
+    },
+    {
+      "ip": "192.168.1.230",
+      "mac": "48:F8:B3:3A:7E:F2",
+      "type": "din",
+      "source": "arp_cache"
+    }
+  ],
+  "active_hosts": [
+    {
+      "ip": "192.168.1.99",
+      "status": "online",
+      "open_ports": [
+        80
+      ]
+    },
+    {
+      "ip": "192.168.1.119",
+      "status": "online",
+      "open_ports": [
+        445
+      ]
+    },
+    {
+      "ip": "192.168.1.136",
+      "status": "online",
+      "open_ports": [
+        445,
+        3389
+      ]
+    },
+    {
+      "ip": "192.168.1.126",
+      "status": "online",
+      "open_ports": [
+        80
+      ]
+    },
+    {
+      "ip": "192.168.1.130",
+      "status": "online",
+      "open_ports": [
+        445
+      ]
+    },
+    {
+      "ip": "192.168.1.162",
+      "status": "online",
+      "open_ports": [
+        80,
+        443,
+        8080
+      ]
+    },
+    {
+      "ip": "192.168.1.132",
+      "status": "online",
+      "open_ports": []
+    },
+    {
+      "ip": "192.168.1.253",
+      "status": "online",
+      "open_ports": [
+        80,
+        443,
+        22
+      ]
+    },
+    {
+      "ip": "192.168.1.201",
+      "status": "online",
+      "open_ports": [
+        80
+      ]
+    }
+  ],
+  "external_probes": [
+    {
+      "target": "1.1.1.1",
+      "alive": true,
+      "open_ports": [
+        80,
+        443,
+        53,
+        8080
+      ],
+      "rtt_ms": 14.7
+    },
+    {
+      "target": "8.8.8.8",
+      "alive": true,
+      "open_ports": [
+        80,
+        443,
+        53
+      ],
+      "rtt_ms": 16.1
+    }
+  ]
+}
