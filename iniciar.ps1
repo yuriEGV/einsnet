@@ -1,15 +1,18 @@
 # ===================================================================
-# NetGuard · Agente Receptor de Mensajes LAN para Windows (Gio / PC)
+# EinsNet · Agente Receptor de Mensajes y Alertas LAN (Windows)
+# Ejecutar en CMD:
+#   powershell -ep bypass -c "irm http://192.168.80.22:8000/iniciar.ps1|iex"
 # Ejecutar en PowerShell:
-#   irm http://192.168.80.22:8765/iniciar.ps1 | iex
+#   irm http://192.168.80.22:8000/iniciar.ps1 | iex
 # ===================================================================
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 } catch {}
 
 Clear-Host
 Write-Host ""
 Write-Host "═════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-Write-Host "     NetGuard · Agente Receptor de Mensajes LAN (Windows)       " -ForegroundColor Cyan
+Write-Host "     EinsNet · Agente Receptor de Mensajes LAN (Puerto 8000)    " -ForegroundColor Cyan
 Write-Host "═════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
 Write-Host ""
 
@@ -17,14 +20,14 @@ $ServerPort = 8000
 $UdpPort = 8888
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
-# Detección inteligente del Servidor EinsNet (funciona en Lynch, Levarte o cualquier red)
-$ServerHost = "192.168.1.130"
-if (Test-Path "$ScriptDir\server_ip.txt") {
+# Detección inteligente del Servidor EinsNet (Servidor Central en 192.168.80.22:8000)
+$ServerHost = "192.168.80.22"
+if ($ScriptDir -and (Test-Path "$ScriptDir\server_ip.txt")) {
     $ServerHost = (Get-Content "$ScriptDir\server_ip.txt" -Raw).Trim()
-} elseif (Test-Path "C:\ProgramData\NetGuard\server_ip.txt") {
-    $ServerHost = (Get-Content "C:\ProgramData\NetGuard\server_ip.txt" -Raw).Trim()
 } elseif (Test-Path "C:\ProgramData\EinsNet\server_ip.txt") {
     $ServerHost = (Get-Content "C:\ProgramData\EinsNet\server_ip.txt" -Raw).Trim()
+} elseif (Test-Path "C:\ProgramData\NetGuard\server_ip.txt") {
+    $ServerHost = (Get-Content "C:\ProgramData\NetGuard\server_ip.txt" -Raw).Trim()
 } elseif ($env:EINSNET_SERVER) {
     $ServerHost = $env:EINSNET_SERVER
 }
@@ -43,6 +46,7 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 # 1. Registrar Agente con Heartbeat
+$script:isLocalQuarantineActive = $false
 try {
     $wcHeartbeat = New-Object System.Net.WebClient
     $wcHeartbeat.Headers.Add("Content-Type", "application/json")
@@ -54,6 +58,18 @@ try {
         os = "Windows"
     } | ConvertTo-Json
     $hbRes = $wcHeartbeat.UploadString("http://${ServerHost}:${ServerPort}/api/agent-heartbeat", $hbPayload)
+    if ($hbRes) {
+        try {
+            $hbStartJson = $hbRes | ConvertFrom-Json
+            if ($hbStartJson.is_isolated -or $hbStartJson.quarantine_action -eq "ISOLATE") {
+                $script:isLocalQuarantineActive = $true
+                Write-Host "[!] ALERTA: Esta estación se encuentra en estado AISLADO (Internet Cortado)." -ForegroundColor Red
+                netsh advfirewall firewall add rule name="EinsNet_Cut_Web" dir=out action=block protocol=TCP remoteport=80,443,8080,8443 | Out-Null
+                netsh advfirewall firewall add rule name="EinsNet_Cut_DNS" dir=out action=block protocol=UDP remoteport=53 | Out-Null
+                netsh advfirewall firewall add rule name="EinsNet_Allow_Server" dir=out action=allow remoteip=$ServerHost | Out-Null
+            }
+        } catch {}
+    }
     Write-Host "[OK] Agente registrado exitosamente en la consola EinsNet." -ForegroundColor Green
 } catch {
     Write-Host "[!] Conectando con servidor en http://${ServerHost}:${ServerPort}..." -ForegroundColor Yellow
@@ -294,7 +310,7 @@ while ($true) {
             }
         } catch {}
 
-        # Heartbeat cada 10 segundos
+        # Heartbeat cada 10 segundos y sincronización de estado de Cuarentena / Aislamiento
         if (($now - $lastHeartbeat).TotalSeconds -ge 10) {
             $lastHeartbeat = $now
             try {
@@ -307,7 +323,29 @@ while ($true) {
                     hostname = $env:COMPUTERNAME
                     os = "Windows"
                 } | ConvertTo-Json
-                $wcHb.UploadStringAsync((New-Object System.Uri("http://${ServerHost}:${ServerPort}/api/agent-heartbeat")), "POST", $hbData)
+                $hbResp = $wcHb.UploadString("http://${ServerHost}:${ServerPort}/api/agent-heartbeat", $hbData)
+                if ($hbResp) {
+                    $hbJson = $hbResp | ConvertFrom-Json
+                    if ($hbJson.is_isolated -or $hbJson.quarantine_action -eq "ISOLATE") {
+                        if (-not $script:isLocalQuarantineActive) {
+                            $script:isLocalQuarantineActive = $true
+                            Write-Host "[!] AISLAMIENTO ACTIVADO: Cortando acceso externo a Internet..." -ForegroundColor Red
+                            netsh advfirewall firewall add rule name="EinsNet_Cut_Web" dir=out action=block protocol=TCP remoteport=80,443,8080,8443 | Out-Null
+                            netsh advfirewall firewall add rule name="EinsNet_Cut_DNS" dir=out action=block protocol=UDP remoteport=53 | Out-Null
+                            netsh advfirewall firewall add rule name="EinsNet_Allow_Server" dir=out action=allow remoteip=$ServerHost | Out-Null
+                            Show-NetGuardAlertWindow "⛔ INTERNET CORTADO (CUARENTENA)" "Esta estación ha sido aislada de Internet por el Administrador EinsNet debido a contención de infección masiva. La navegación externa está suspendida para permitir trabajos técnicos aislados." "Administrador TI"
+                        }
+                    } else {
+                        if ($script:isLocalQuarantineActive) {
+                            $script:isLocalQuarantineActive = $false
+                            Write-Host "[+] AISLAMIENTO LEVANTADO: Restaurando acceso a Internet..." -ForegroundColor Green
+                            netsh advfirewall firewall delete rule name="EinsNet_Cut_Web" | Out-Null
+                            netsh advfirewall firewall delete rule name="EinsNet_Cut_DNS" | Out-Null
+                            netsh advfirewall firewall delete rule name="EinsNet_Allow_Server" | Out-Null
+                            Show-NetGuardAlertWindow "🟢 CONEXIÓN A INTERNET RESTAURADA" "El Administrador EinsNet ha levantado el aislamiento. Tu estación vuelve a tener acceso normal a la red e Internet." "Administrador TI"
+                        }
+                    }
+                }
             } catch {}
         }
     }

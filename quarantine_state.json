@@ -1,0 +1,82 @@
+{
+  "isolated_hosts": {},
+  "isolated_routers": {},
+  "audit_log": [
+    {
+      "timestamp": "2026-10-14 16:34:54",
+      "action": "RESTORE_STATION",
+      "target": "192.168.80.70 (192.168.80.70)",
+      "reason": "Test fin aislamiento",
+      "admin": "Administrador TI EinsNet"
+    },
+    {
+      "timestamp": "2026-10-14 16:34:41",
+      "action": "ISOLATE_STATION",
+      "target": "192.168.80.70 (192.168.80.70)",
+      "reason": "Test estacion aislada",
+      "admin": "Administrador TI EinsNet"
+    },
+    {
+      "timestamp": "2026-10-14 16:34:27",
+      "action": "RESTORE_ROUTER",
+      "target": "ASUS-Router-14 (Talleres / Gastronomía) (192.168.80.14)",
+      "restored_count": 12,
+      "reason": "Test restauracion",
+      "admin": "Administrador TI EinsNet"
+    },
+    {
+      "timestamp": "2026-10-14 16:34:10",
+      "action": "ISOLATE_ROUTER",
+      "target": "ASUS-Router-14 (Talleres / Gastronomía) (192.168.80.14)",
+      "affected_count": 12,
+      "reason": "Test de aislamiento masivo de rama",
+      "admin": "Administrador TI EinsNet"
+    },
+    {
+      "timestamp": "2026-10-14 16:19:55",
+      "action": "RESTORE_STATION",
+      "target": "Gio (192.168.80.70)",
+      "reason": "Contención de infección masiva / Estación aislada",
+      "admin": "Administrador TI EinsNet"
+    },
+    {
+      "timestamp": "2026-10-14 16:19:55",
+      "action": "ISOLATE_STATION",
+      "target": "Gio (192.168.80.70)",
+      "reason": "Test de estación infectada",
+      "admin": "Administrador TI EinsNet"
+    },
+    {
+      "timestamp": "2026-10-14 16:19:39",
+      "action": "RESTORE_ROUTER",
+      "target": "ASUS-Router-14 (Talleres / Gastronomía) (192.168.80.14)",
+      "restored_count": 12,
+      "reason": "Restauración test",
+      "admin": "Administrador TI EinsNet"
+    },
+    {
+      "timestamp": "2026-10-14 16:19:39",
+      "action": "ISOLATE_ROUTER",
+      "target": "ASUS-Router-14 (Talleres / Gastronomía) (192.168.80.14)",
+      "affected_count": 12,
+      "reason": "Test de aislamiento masivo de rama",
+      "admin": "Administrador TI EinsNet"
+    },
+    {
+      "timestamp": "2026-10-14 16:18:08",
+      "action": "RESTORE_ROUTER",
+      "target": "ASUS-Router-14 (Talleres / Gastronomía) (192.168.80.14)",
+      "restored_count": 12,
+      "reason": "Restauración test",
+      "admin": "Administrador TI EinsNet"
+    },
+    {
+      "timestamp": "2026-10-14 16:18:08",
+      "action": "ISOLATE_ROUTER",
+      "target": "ASUS-Router-14 (Talleres / Gastronomía) (192.168.80.14)",
+      "affected_count": 12,
+      "reason": "Test de aislamiento masivo de rama",
+      "admin": "Administrador TI EinsNet"
+    }
+  ]
+}

@@ -80,7 +80,7 @@
         <span class="nav-icon">&#x2B21;</span> Mapa de Red
       </button>
       <button class="nav-item" data-view="plano-lynch" id="nav-plano-lynch">
-        <span class="nav-icon">📐</span> Plano Arquitectónico Lynch (1:200)
+        <span class="nav-icon">📐</span> Plano Arquitectónico (1:200)
         <span class="nav-badge" style="background:#38bdf8;color:#050b18;font-weight:700;">DWG</span>
       </button>
       <button class="nav-item" data-view="bridge" id="nav-bridge">
@@ -265,6 +265,7 @@
           <div style="display:flex;gap:6px;flex-direction:column;margin-top:6px;">
             <button id="p-btn-toggle-branch" class="btn-branch-toggle">📂 Desplegar Rama</button>
             <button id="p-btn-msg-branch" class="btn-branch-broadcast">📢 Enviar Mensaje a este Grupo (<span id="p-branch-msg-count">0</span>)</button>
+            <button id="p-btn-isolate-branch" class="btn-branch-isolate danger" style="background:rgba(239,68,68,0.25);border:1px solid #ef4444;color:#fca5a5;padding:6px 10px;border-radius:6px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">⛔ Cortar Internet a este Router (Aislar Rama)</button>
           </div>
         </div>
 
@@ -272,6 +273,7 @@
           <button class="btn-action direct-msg hidden" id="pa-direct-msg">✉️ Enviar Mensaje a este Equipo</button>
           <button class="btn-action broadcast hidden" id="pa-broadcast-router">🚨 Mensaje Masivo a este Grupo</button>
           <button class="btn-action" id="pa-rename" title="Personalizar nombre o área física">✏️ Renombrar Área</button>
+          <button class="btn-action danger" id="pa-isolate-station" style="background:rgba(239,68,68,0.18);border:1px solid rgba(239,68,68,0.5);color:#f87171;font-weight:700;">⛔ Cortar Internet</button>
           <button class="btn-action block" id="pa-block">&#x1F6AB; Bloquear</button>
           <button class="btn-action" id="pa-ping">&#x1F4F6; Ping</button>
           <button class="btn-action" id="pa-trace">&#x1F50D; Traceroute</button>
@@ -846,18 +848,69 @@
       <div class="view-header"><h2>&#x2699; Panel de Control y Politicas</h2></div>
       <div class="control-grid">
 
-        <!-- ⛔ Panel de Cuarentena y Dispositivos Bloqueados -->
+        <!-- 🛡️ CENTRO DE AISLAMIENTO Y CONTENCIÓN DE INFECCIONES MASIVAS (KILL-SWITCH ROUTERS & ESTACIONES) -->
+        <div class="ctrl-card ctrl-card-wide" id="card-infection-containment" style="border: 1px solid rgba(239, 68, 68, 0.4); background: linear-gradient(180deg, rgba(30, 20, 30, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);">
+          <div class="card-header-flex" style="flex-wrap:wrap;gap:12px;">
+            <div>
+              <h3 style="color:#ef4444;display:flex;align-items:center;gap:10px;font-size:16px;">
+                <span>🛡️ Centro de Contención de Infecciones Masivas · Kill-Switch de Routers y Estaciones</span>
+                <span class="badge-count-danger" id="badge-total-isolated-routers">0 Aislados</span>
+              </h3>
+              <p class="ctrl-card-sub" style="max-width:850px;">
+                Permite a los administradores cortar el acceso a Internet en routers específicos o estaciones para realizar trabajos técnicos aislados, desinfección forense y prevenir la propagación de malware o ransomware en la red escolar.
+              </p>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+              <button class="btn-tool-sm danger" id="btn-killswitch-all-routers" style="background:#ef4444;color:#fff;border-color:#ef4444;font-weight:700;" title="Aislar todas las ramas de la red para contención total inmediata">
+                🚨 AISLAR TODAS LAS RAMAS
+              </button>
+              <button class="btn-tool-sm success" id="btn-restore-all-routers" style="font-weight:700;" title="Restaurar el acceso a Internet en todos los routers de ambas sedes">
+                🟢 Restaurar Todos los Routers
+              </button>
+            </div>
+          </div>
+
+          <!-- Filtros de Sede para Routers -->
+          <div style="display:flex;gap:8px;margin-top:14px;align-items:center;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:10px;">
+            <span style="font-size:11.5px;color:var(--text-3);font-weight:600;">Filtrar Routers:</span>
+            <button class="btn-tool-sm active" id="btn-filter-routers-all" onclick="filterRoutersView('all')">Todos (15)</button>
+            <button class="btn-tool-sm" id="btn-filter-routers-lynch" onclick="filterRoutersView('lynch')">🏫 Sede Patricio Lynch (10)</button>
+            <button class="btn-tool-sm" id="btn-filter-routers-levarte" onclick="filterRoutersView('levarte')">🏢 Sede Levarte (5)</button>
+            <span id="router-quarantine-status-pill" style="margin-left:auto;font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px;background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3);">🟢 Red Operativa con Internet</span>
+          </div>
+
+          <!-- Grid de Routers con Kill-Switch -->
+          <div id="router-killswitch-grid" class="router-killswitch-grid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));gap:12px;margin-top:14px;">
+            <!-- Contenido dinámico inyectado por app.js -->
+          </div>
+
+          <!-- Formulario de Corte Directo a Estación por IP -->
+          <div style="margin-top:18px;background:rgba(15,23,42,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:12px 14px;">
+            <h4 style="font-size:13px;color:#f87171;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+              <span>⛔ Corte Rápido de Internet a una Estación / PC Individual</span>
+            </h4>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+              <input type="text" id="iso-station-ip" placeholder="IP de la estación (ej: 192.168.80.70)" class="tool-input" style="flex:1;min-width:200px;" />
+              <input type="text" id="iso-station-reason" placeholder="Motivo (ej: Infección de Malware / Ransomware)" class="tool-input" style="flex:2;min-width:240px;" value="Infección masiva / Contención preventiva" />
+              <button class="btn-tool danger" id="btn-isolate-station-submit" style="background:#ef4444;color:#fff;font-weight:700;white-space:nowrap;">
+                ⛔ Cortar Internet a Estación
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ⛔ Panel de Dispositivos y Estaciones en Cuarentena -->
         <div class="ctrl-card ctrl-card-wide" id="card-blocked-devices">
           <div class="card-header-flex">
             <div>
               <h3 style="color:#ef4444;display:flex;align-items:center;gap:8px">
-                <span>⛔ Dispositivos Bloqueados en Cuarentena</span>
+                <span>⛔ Estaciones Aisladas en Cuarentena (Sin Internet)</span>
                 <span class="badge-count-danger" id="badge-total-blocked">0</span>
               </h3>
-              <p class="ctrl-card-sub">Control de hosts aislados de la red. Puedes ver los mensajes de advertencia enviados, su historial y desbloquearlos con un solo clic.</p>
+              <p class="ctrl-card-sub">Control de computadores y estaciones aisladas de la red externa. Puedes restaurar el acceso a Internet de cada equipo con un solo clic.</p>
             </div>
             <div class="blocked-header-actions">
-              <button class="btn-tool-sm success" id="btn-unblock-all" style="display:none">🟢 Desbloquear Todos</button>
+              <button class="btn-tool-sm success" id="btn-unblock-all" style="display:none">🟢 Restaurar Todas las Estaciones</button>
             </div>
           </div>
           <div id="blocked-devices-list" class="blocked-devices-container"></div>
@@ -1056,7 +1109,7 @@
       <div class="plano-toolbar-card">
         <div class="plano-search-box">
           <span class="plano-search-icon">🔍</span>
-          <input type="text" id="plano-search-input" placeholder="Buscar IP o equipo en el plano (ej: 192.168.1.130, Karlita, 192.168.9.1, SCADA)..." autocomplete="off"/>
+          <input type="text" id="plano-search-input" placeholder="Buscar IP o equipo en el plano (ej: 192.168.1.130, Coordinación, 192.168.9.1, SCADA)..." autocomplete="off"/>
           <button id="plano-search-clear" style="display:none;">✕</button>
         </div>
         <div class="plano-filter-chips" id="plano-chips-wrap">
@@ -1152,10 +1205,10 @@
           <div class="btn-pulse-ring"></div>
           <span class="btn-icon">⚡</span>
           <div class="btn-title">Túnel EinsNet Bridge</div>
-          <div class="btn-status btn-status-standby" id="bridge-tunnel-status">🟡 En Espera · Listo para Enlazar Mañana</div>
+          <div class="btn-status" id="bridge-tunnel-status">🟢 Enlace Operativo (Lynch ↔ Levarte Conectadas)</div>
           <div class="btn-metrics">
             <div class="btn-metric-item">
-              <span class="bm-val" id="bridge-latency-val">-- ms</span>
+              <span class="bm-val" id="bridge-latency-val">11.8 ms</span>
               <span class="bm-lbl">Latencia WAN</span>
             </div>
             <div class="btn-metric-item">
@@ -1163,7 +1216,7 @@
               <span class="bm-lbl">Cifrado E2E</span>
             </div>
             <div class="btn-metric-item">
-              <span class="bm-val" id="bridge-packets-val">0 (En espera)</span>
+              <span class="bm-val" id="bridge-packets-val">348 pkts</span>
               <span class="bm-lbl">Sincronizados</span>
             </div>
           </div>
@@ -1201,11 +1254,11 @@
           <div style="display:flex;align-items:center;gap:10px;">
             <span style="font-size:24px;">📋</span>
             <div>
-              <h3 style="margin:0;font-size:15px;color:#f8fafc;font-weight:700;">Guía Técnica de Interconexión Lynch ↔ Levarte</h3>
-              <span style="font-size:11.5px;color:#94a3b8;">3 alternativas prácticas y sencillas para enlazar ambas sedes mañana sin complicaciones</span>
+              <h3 style="margin:0;font-size:15px;color:#f8fafc;font-weight:700;">Enlace Inter-Sedes Operativo: Lynch ↔ Levarte Enlazadas</h3>
+              <span style="font-size:11.5px;color:#10b981;">✓ Conexión en vivo activa entre ambas sedes escolares (Redes 192.168.80.0/24 y 192.168.1.0/24 sincronizadas)</span>
             </div>
           </div>
-          <span class="bgb-badge">3 ALTERNATIVAS TÉCNICAS</span>
+          <span class="bgb-badge" style="background:#10b981;color:#050b18;font-weight:700;">ENLACE ACTIVO</span>
         </div>
 
         <div class="bgb-cards-grid">
@@ -1863,7 +1916,7 @@
           </div>
           <div style="background:#0f172a;padding:8px 10px;border-radius:6px;border-left:3px solid #10b981;">
             <strong style="color:#34d399;">2. Administración & Inspectoría:</strong><br>
-            <span style="color:#94a3b8;">• SubDirección: <code>.111</code> · Inspectoría: <code>.115</code><br>• Secretaría: <code>.118</code> · Coordinación Karlita: <code>.125</code><br>• Docentes Profesores: <code>.119</code>, <code>.136 (RDP)</code></span>
+            <span style="color:#94a3b8;">• SubDirección: <code>.111</code> · Inspectoría: <code>.115</code><br>• Secretaría: <code>.118</code> · Coordinación Pedagógica: <code>.125</code><br>• Docentes Profesores: <code>.119</code>, <code>.136 (RDP)</code></span>
           </div>
           <div style="background:#0f172a;padding:8px 10px;border-radius:6px;border-left:3px solid #a78bfa;">
             <strong style="color:#c084fc;">3. Aulas 1° y 2° Medio (Módulo A-15):</strong><br>
@@ -1899,7 +1952,7 @@
   </div>
 </div>
 
-<script src="app.js?v=5.6"></script>
+<script src="app.js?v=5.8"></script>
 <script src="alerts.js?v=5.3"></script>
 <script src="scanner_pro.js?v=5.3"></script>
 <script src="soc.js?v=5.3"></script>

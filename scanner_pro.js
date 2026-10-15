@@ -45,7 +45,7 @@ const EXTENSION_SUBNETS = {
       { ip:'192.168.1.99',  name:'GW-FortiGate-Levarte', mac:'E0:23:FF:36:E1:55', vendor:'Fortinet Gateway',     type:'router', lat:1,  ports:[80,443,22] },
       { ip:'192.168.1.253', name:'Web-Switch-Levarte',   mac:'E8:94:F6:2F:85:46', vendor:'Switch L2/L3 Aulas',   type:'router', lat:2,  ports:[80,443] },
       { ip:'192.168.1.130', name:'maritimo (Consola TI)',mac:'08:8F:C3:B8:0B:F7', vendor:'ASUSTeK COMPUTER',    type:'pc',     lat:1,  ports:[22,80,443,8000] },
-      { ip:'192.168.1.125', name:'Karlita (Coord. Ped)', mac:'08:8F:C3:B7:03:2F', vendor:'Lenovo Corp.',        type:'pc',     lat:3,  ports:[135,445] },
+      { ip:'192.168.1.125', name:'Coordinación Pedagógica', mac:'08:8F:C3:B7:03:2F', vendor:'Lenovo Corp.',        type:'pc',     lat:3,  ports:[135,445] },
       { ip:'192.168.1.111', name:'SubDireccion',         mac:'08:8F:C3:B6:66:2C', vendor:'Lenovo Corp.',        type:'pc',     lat:3,  ports:[135,445] },
       { ip:'192.168.1.115', name:'Inspectoria',          mac:'08:8F:C3:B6:65:38', vendor:'Lenovo Corp.',        type:'pc',     lat:3,  ports:[135,445] },
       { ip:'192.168.1.118', name:'Secretaria',           mac:'08:8F:C3:B6:62:69', vendor:'HP Inc.',              type:'pc',     lat:4,  ports:[135,445] },

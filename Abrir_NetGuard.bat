@@ -1,12 +1,7 @@
 @echo off
-title Iniciando EinsNet Monitor LAN
+title Iniciando EinsNet Monitor LAN (Puerto 8000)
 cd /d "%~dp0"
-echo [*] Verificando Motor Real EinsNet...
-netstat -ano | findstr :8000 >nul
-if errorlevel 1 (
-    echo [*] Iniciando servidor y conector de red en segundo plano (Puerto 8000)...
-    start "" /b python netguard_server.py
-    timeout /t 1 /nobreak >nul
-)
+echo [*] Verificando y asegurando Motor Real EinsNet en puerto 8000...
+python supervisor_einsnet.py --ensure
 start "" "http://localhost:8000"
 exit

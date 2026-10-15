@@ -266,7 +266,7 @@ while ($true) {
             }
         } catch {}
 
-        # Heartbeat
+        # Heartbeat y verificación de Cuarentena / Aislamiento
         if (($now - $lastHeartbeat).TotalSeconds -ge 10) {
             $lastHeartbeat = $now
             try {
@@ -279,7 +279,29 @@ while ($true) {
                     hostname = $env:COMPUTERNAME
                     os = "Windows"
                 } | ConvertTo-Json
-                $wcHb.UploadStringAsync((New-Object System.Uri("http://${ServerHost}:${ServerPort}/api/agent-heartbeat")), "POST", $hbData)
+                $hbResp = $wcHb.UploadString("http://${ServerHost}:${ServerPort}/api/agent-heartbeat", $hbData)
+                if ($hbResp) {
+                    $hbJson = $hbResp | ConvertFrom-Json
+                    if ($hbJson.is_isolated -or $hbJson.quarantine_action -eq "ISOLATE") {
+                        if (-not $script:isLocalQuarantineActive) {
+                            $script:isLocalQuarantineActive = $true
+                            Write-Host "[!] AISLAMIENTO ACTIVADO: Cortando acceso externo a Internet..." -ForegroundColor Red
+                            netsh advfirewall firewall add rule name="EinsNet_Cut_Web" dir=out action=block protocol=TCP remoteport=80,443,8080,8443 | Out-Null
+                            netsh advfirewall firewall add rule name="EinsNet_Cut_DNS" dir=out action=block protocol=UDP remoteport=53 | Out-Null
+                            netsh advfirewall firewall add rule name="EinsNet_Allow_Server" dir=out action=allow remoteip=$ServerHost | Out-Null
+                            Show-NetGuardAlertWindow "⛔ INTERNET CORTADO (CUARENTENA)" "Esta estación ha sido aislada de Internet por el Administrador EinsNet debido a contención de infección masiva." "Administrador TI"
+                        }
+                    } else {
+                        if ($script:isLocalQuarantineActive) {
+                            $script:isLocalQuarantineActive = $false
+                            Write-Host "[+] AISLAMIENTO LEVANTADO: Restaurando acceso a Internet..." -ForegroundColor Green
+                            netsh advfirewall firewall delete rule name="EinsNet_Cut_Web" | Out-Null
+                            netsh advfirewall firewall delete rule name="EinsNet_Cut_DNS" | Out-Null
+                            netsh advfirewall firewall delete rule name="EinsNet_Allow_Server" | Out-Null
+                            Show-NetGuardAlertWindow "🟢 CONEXIÓN A INTERNET RESTAURADA" "El Administrador EinsNet ha levantado el aislamiento." "Administrador TI"
+                        }
+                    }
+                }
             } catch {}
         }
     }

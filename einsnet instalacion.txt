@@ -1,0 +1,38 @@
+curl -s http://192.168.80.22:8765/einsnet_node.py -o einsnet_node.py && python einsnet_node.py
+
+
+
+
+
+permanente : python einsnet_node.py --install
+
+
+Archivos Creados en el Proyecto
+
+
+einsnet_node.py
+: Código principal del nodo receptor y relay.
+
+
+Iniciar_Nodo_EinsNet.bat
+: Acceso directo para probarlo y abrirlo en consola.
+
+
+Instalar_Nodo_EinsNet.bat
+: Instalador que configura el firewall y lo deja residente en segundo plano para que inicie automáticamente con Windows.
+Cómo Ejecutarlo o Instalarlo en Cualquier Máquina
+1. En la máquina de Levarte (192.168.1.131 como Servidor Satélite):
+Ejecutar en consola:
+
+cmd
+python einsnet_node.py --satellite --server 192.168.80.22:8765
+(Quedará enlazada al maestro de Lynch y servirá a todos los talleres de Levarte).
+
+2. En cualquier computador del colegio (Docentes, Alumnos, Talleres):
+Descarga y ejecución directa en 1 línea (PowerShell o CMD):
+cmd
+curl -s http://192.168.80.22:8765/einsnet_node.py -o einsnet_node.py && python einsnet_node.py
+Para dejarlo instalado permanente de fondo:
+cmd
+python einsnet_node.py --install
+Ambos puertos (8765 para Lynch y 8000 para Levarte) ya tienen habilitada la distribución inmediata del script.

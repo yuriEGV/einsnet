@@ -1,0 +1,75 @@
+===============================================================================
+       EINSNET · MÓDULO DE COMUNICACIONES Y MENSAJERÍA ESCOLAR LAN
+       Servidor Central Unificado: http://192.168.80.22:8000
+===============================================================================
+
+¿POR QUÉ EL COMANDO "irm" NO SE RECONOCÍA EN LAS MÁQUINAS?
+-------------------------------------------------------------------------------
+1. El comando "irm" es un alias que SOLO existe dentro de PowerShell (Invoke-RestMethod).
+   Si alguien lo escribe en CMD (Símbolo del sistema) o en la ventana Ejecutar (Win+R),
+   Windows muestra el error:
+   "'irm' no se reconoce como un comando interno o externo, programa o archivo por lotes ejecutable."
+
+2. Si se ejecuta en PowerShell pero la directiva de ejecución está restringida,
+   Windows bloquea la descarga sin avisar claramente.
+
+3. Todo el sistema ahora opera EXCLUSIVAMENTE en el PUERTO 8000 (se eliminó el 8765).
+
+===============================================================================
+MÉTODOS 100% FUNCIONALES PARA CONECTAR CUALQUIER COMPUTADOR DE LA RED
+===============================================================================
+
+-------------------------------------------------------------------------------
+MÉTODO 1: EL MÁS FÁCIL (Con Pendrive o Carpeta Compartida)
+-------------------------------------------------------------------------------
+1. Copia esta carpeta "Modulo_Comunicaciones_LAN" en un pendrive o compártela en la red.
+2. En el equipo cliente (profesor, sala, administración), entra a la carpeta.
+3. Haz doble clic en:
+   👉 "01_Instalar_Receptor_En_Este_PC.bat"
+4. Acepta los permisos de Administrador cuando Windows lo solicite.
+5. ¡Listo! El equipo aplicará las directivas de registro, abrirá el firewall,
+   instalará el receptor en segundo plano y se registrará automáticamente en el
+   servidor central.
+
+-------------------------------------------------------------------------------
+MÉTODO 2: DESDE SÍMBOLO DEL SISTEMA (CMD) - En 1 Sola Línea
+-------------------------------------------------------------------------------
+Abre CMD (Símbolo del sistema) en el equipo cliente y pega esto:
+
+powershell -ep bypass -c "irm http://192.168.80.22:8000/iniciar.ps1|iex"
+
+(Este comando invoca PowerShell con bypass de políticas y ejecuta el receptor).
+
+-------------------------------------------------------------------------------
+MÉTODO 3: DESDE CMD USANDO CURL (Windows 10 / 11)
+-------------------------------------------------------------------------------
+En CMD del equipo cliente, pega:
+
+curl -s http://192.168.80.22:8000/instalar.bat -o %temp%\inst.bat && %temp%\inst.bat
+
+(Descarga el instalador completo desde el servidor y lo ejecuta al instante).
+
+-------------------------------------------------------------------------------
+MÉTODO 4: DESDE POWERSHELL
+-------------------------------------------------------------------------------
+En PowerShell del cliente (como Administrador preferentemente):
+
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm http://192.168.80.22:8000/iniciar.ps1 | iex
+
+===============================================================================
+ARCHIVOS INCLUIDOS EN ESTE MÓDULO:
+===============================================================================
+- 01_Instalar_Receptor_En_Este_PC.bat : Instalador 1-click para máquinas clientes.
+- 02_Configurar_Directivas_Windows.bat : Configura AllowRemoteRPC y Firewall.
+- 03_Enviar_Alerta_Manual.bat         : Consola interactiva para emitir avisos y emergencias.
+- iniciar.ps1                         : Código fuente del agente receptor en segundo plano.
+- Habilitar_Mensajes.reg              : Claves de registro de Windows para mensajes nativos.
+- server_ip.txt                       : Contiene la IP del servidor maestro (192.168.80.22).
+
+===============================================================================
+CANALES DE TRANSMISIÓN ACTIVOS EN CADA ALERTA:
+===============================================================================
+1. Canal HTTP Polling (Puerto 8000): Garantiza entrega incluso con firewalls activos.
+2. Canal UDP Broadcast (Puerto 8888): Transmisión instantánea en menos de 5 ms.
+3. Canal Windows MSG (RPC Puerto 135/445): Mensajes nativos de escritorio Windows.
+4. Voz Sintética + Alarma Sonora: Avisa en voz alta el contenido del mensaje.
