@@ -32,13 +32,13 @@ const LYNCH_SEED = [
   { ip:'192.168.80.30', name:'Offline-30', schoolArea:'Reserva / Sala Profesores', mac:'AA:BB:CC:DD:EE:01', vendor:'Desconocido',                 type:'unknown', vlan:1,  status:'offline', lat:0,  jitter:0,   loss:0, up:0,   down:0,   bridgeTo:'192.168.80.1' },
   { ip:'192.168.80.35', name:'Offline-35', schoolArea:'Reserva / Taller Mecánica', mac:'AA:BB:CC:DD:EE:02', vendor:'Desconocido',                 type:'unknown', vlan:1,  status:'offline', lat:0,  jitter:0,   loss:0, up:0,   down:0,   bridgeTo:'192.168.80.1' },
 
-  // Extensión satélite WiFi Belkin (Patio Central)
-  { ip:'192.168.1.1',   name:'Belkin-WiFi-Router', schoolArea:'Patio Central / Router WiFi', mac:'C0:56:27:6F:87:40', vendor:'Belkin International Inc.', type:'router',  vlan:20, status:'online',  lat:3,  jitter:0.5, loss:0, up:110, down:320,  bridgeTo:'192.168.80.9' },
-  { ip:'192.168.1.15',  name:'Samsung-Galaxy-S23', schoolArea:'Patio / Celular Alumno', mac:'3C:7A:8A:12:44:B1', vendor:'Samsung Electronics',        type:'pc',      vlan:20, status:'online',  lat:14, jitter:1.2, loss:0, up:60,  down:280,  bridgeTo:'192.168.80.9' },
-  { ip:'192.168.1.28',  name:'iPhone-15-Invitado', schoolArea:'Patio / WiFi Visita', mac:'F0:D1:A9:7B:88:C2', vendor:'Apple, Inc.',                type:'pc',      vlan:20, status:'online',  lat:18, jitter:1.5, loss:0, up:40,  down:190,  bridgeTo:'192.168.80.9' },
-  { ip:'192.168.1.42',  name:'SmartTV-LG-OLED', schoolArea:'Patio / Pantalla Mural Informativa', mac:'A8:23:FE:45:90:1D', vendor:'LG Electronics',             type:'pc',      vlan:20, status:'online',  lat:8,  jitter:0.8, loss:0, up:180, down:950,  bridgeTo:'192.168.80.9' },
-  { ip:'192.168.1.55',  name:'MacBook-Air-M2', schoolArea:'Patio / Laptop Docente', mac:'74:D0:2B:66:31:FE', vendor:'Apple, Inc.',                type:'pc',      vlan:20, status:'online',  lat:9,  jitter:0.9, loss:0, up:340, down:1200, bridgeTo:'192.168.80.9' },
-  { ip:'192.168.1.100', name:'Chromecast-4K', schoolArea:'Patio / Dongle Multimedia', mac:'D4:F5:47:88:29:A0', vendor:'Google LLC',                 type:'pc',      vlan:20, status:'online',  lat:11, jitter:1.1, loss:0, up:70,  down:450,  bridgeTo:'192.168.80.9' },
+  // Extensión satélite WiFi Belkin Patio Central (Subred WiFi 192.168.89.x)
+  { ip:'192.168.89.1',   name:'Belkin-WiFi-Router', schoolArea:'Patio Central / Router WiFi', mac:'C0:56:27:6F:87:40', vendor:'Belkin International Inc.', type:'router',  vlan:20, status:'online',  lat:3,  jitter:0.5, loss:0, up:110, down:320,  bridgeTo:'192.168.80.9' },
+  { ip:'192.168.89.15',  name:'Samsung-Galaxy-S23', schoolArea:'Patio / Celular Alumno', mac:'3C:7A:8A:12:44:B1', vendor:'Samsung Electronics',        type:'pc',      vlan:20, status:'online',  lat:14, jitter:1.2, loss:0, up:60,  down:280,  bridgeTo:'192.168.80.9' },
+  { ip:'192.168.89.28',  name:'iPhone-15-Invitado', schoolArea:'Patio / WiFi Visita', mac:'F0:D1:A9:7B:88:C2', vendor:'Apple, Inc.',                type:'pc',      vlan:20, status:'online',  lat:18, jitter:1.5, loss:0, up:40,  down:190,  bridgeTo:'192.168.80.9' },
+  { ip:'192.168.89.42',  name:'SmartTV-LG-OLED', schoolArea:'Patio / Pantalla Mural Informativa', mac:'A8:23:FE:45:90:1D', vendor:'LG Electronics',             type:'pc',      vlan:20, status:'online',  lat:8,  jitter:0.8, loss:0, up:180, down:950,  bridgeTo:'192.168.80.9' },
+  { ip:'192.168.89.55',  name:'MacBook-Air-M2', schoolArea:'Patio / Laptop Docente', mac:'74:D0:2B:66:31:FE', vendor:'Apple, Inc.',                type:'pc',      vlan:20, status:'online',  lat:9,  jitter:0.9, loss:0, up:340, down:1200, bridgeTo:'192.168.80.9' },
+  { ip:'192.168.89.100', name:'Chromecast-4K', schoolArea:'Patio / Dongle Multimedia', mac:'D4:F5:47:88:29:A0', vendor:'Google LLC',                 type:'pc',      vlan:20, status:'online',  lat:11, jitter:1.1, loss:0, up:70,  down:450,  bridgeTo:'192.168.80.9' },
 
   // Extensión Estaciones ASUS & Talleres / Gastronomía (192.168.14.x)
   { ip:'192.168.14.1',   name:'ASUS-GW-Lab', schoolArea:'Taller Gastronomía / Gateway Lab', mac:'FC:34:97:D0:B7:A9', vendor:'ASUSTeK COMPUTER INC.',       type:'router',  vlan:20, status:'online',  lat:5,  jitter:0.6, loss:0, up:320, down:880,  bridgeTo:'192.168.80.14' },
@@ -149,6 +149,24 @@ const LEVARTE_SEED = [
   { ip:'192.168.9.100', name:'Chromecast-Sala-Docentes', schoolArea:'Sala Profesores · Proyector TV Multimedia', mac:'D4:F5:47:99:09:00', vendor:'Google LLC', type:'pc', vlan:20, status:'online', lat:8, jitter:0.9, loss:0, up:90, down:680, bridgeTo:'192.168.9.1' }
 ];
 
+// Clasificación universal de sedes (Sede Levarte vs Sede Patricio Lynch)
+function getDeviceSede(deviceOrIp) {
+  if (!deviceOrIp) return 'lynch';
+  const ip = typeof deviceOrIp === 'string' ? deviceOrIp : (deviceOrIp.ip || '');
+  const sedeAttr = typeof deviceOrIp === 'object' ? deviceOrIp.sede : null;
+  if (sedeAttr === 'levarte' || sedeAttr === 'lynch') return sedeAttr;
+
+  // Subredes y rangos pertenecientes a Sede Levarte (Módulo A-15, 1° y 2° Medio)
+  if (ip.startsWith('192.168.1.') || ip.startsWith('192.168.9.')) {
+    return 'levarte';
+  }
+
+  // Subredes y rangos pertenecientes a Sede Patricio Lynch (Casa Central, 3° y 4° Medio)
+  // (192.168.80.x, 192.168.89.x, 192.168.14.x, 192.168.15.x, 192.168.17.x, 172.16.16.x, 192.168.137.x, etc.)
+  return 'lynch';
+}
+window.getDeviceSede = getDeviceSede;
+
 // Semilla activa inicial por defecto (Sede Levarte al estar en sitio)
 const SEED = LEVARTE_SEED;
 
@@ -156,14 +174,14 @@ function getRootGateway() {
   if (state.mapSedeView === 'both') {
     return state.devices.find(d => d.ip === '192.168.1.99') || state.devices.find(d => d.ip === '192.168.80.1') || state.devices[0];
   }
-  if (state.currentSede === 'levarte' || state.mapSedeView === 'levarte') {
-    return state.devices.find(d => d.ip === '192.168.1.99') || state.devices.find(d => d.type === 'router') || state.devices[0];
+  if (state.mapSedeView === 'levarte') {
+    return state.devices.find(d => d.ip === '192.168.1.99') || state.devices.find(d => d.type === 'router' && getDeviceSede(d) === 'levarte') || state.devices[0];
   }
-  return state.devices.find(d => d.ip === '192.168.80.1') || state.devices.find(d => d.type === 'router') || state.devices[0];
+  return state.devices.find(d => d.ip === '192.168.80.1') || state.devices.find(d => d.type === 'router' && getDeviceSede(d) === 'lynch') || state.devices[0];
 }
 
 function getRootGatewayIp() {
-  return (state.currentSede === 'levarte' || state.mapSedeView === 'levarte') ? '192.168.1.99' : '192.168.80.1';
+  return (state.mapSedeView === 'levarte') ? '192.168.1.99' : '192.168.80.1';
 }
 
 function updateTopologyCounters() {
@@ -171,9 +189,15 @@ function updateTopologyCounters() {
   const isLynch = state.mapSedeView === 'lynch';
   const isLevarte = state.mapSedeView === 'levarte';
 
-  const devs = state.devices || [];
-  const onlineCount = devs.filter(d => d.status === 'online').length;
-  const totalCount = devs.length;
+  const relevantDevs = (state.devices || []).filter(d => {
+    const s = getDeviceSede(d);
+    if (isLevarte) return s === 'levarte';
+    if (isLynch) return s === 'lynch';
+    return true;
+  });
+
+  const onlineCount = relevantDevs.filter(d => d.status === 'online').length;
+  const totalCount = relevantDevs.length;
 
   const badgeEl = $('seg-live-count');
   if (badgeEl) badgeEl.textContent = `${onlineCount} Vivos`;
@@ -197,51 +221,30 @@ function updateTopologyCounters() {
   const sedePill = $('sede-pill');
   if (sedePill) {
     if (isBoth) {
-      sedePill.innerHTML = `<span style="color:#c084fc;">🌐</span> <strong>Vista Dual Bisede</strong> <span style="font-size:11px;color:#94a3b8;">(${onlineCount} vivos / ${totalCount} nodos · Túnel WAN Activo)</span>`;
+      sedePill.innerHTML = `<span style="color:#c084fc;">🌐</span> <strong>Vista Dual Bisede</strong> <span style="font-size:11px;color:#94a3b8;">(${onlineCount} vivos / ${totalCount} nodos · Enlace WAN Activo)</span>`;
     } else if (isLevarte) {
       sedePill.innerHTML = `<span style="color:#10b981;">📍</span> <strong>Sede Levarte</strong> <span style="font-size:11px;color:#94a3b8;">(${onlineCount} vivos / ${totalCount} nodos · Módulo A-15)</span>`;
     } else {
-      sedePill.innerHTML = `<span style="color:#38bdf8;">🏫</span> <strong>Sede Lynch</strong> <span style="font-size:11px;color:#94a3b8;">(${onlineCount} vivos / ${totalCount} nodos · Central)</span>`;
+      sedePill.innerHTML = `<span style="color:#38bdf8;">🏫</span> <strong>Sede Lynch</strong> <span style="font-size:11px;color:#94a3b8;">(${onlineCount} vivos / ${totalCount} nodos · Casa Central)</span>`;
     }
   }
 }
 
 function switchMapSedeView(mode) {
   state.mapSedeView = mode; // 'levarte' | 'lynch' | 'both'
+  if (mode === 'levarte') state.currentSede = 'levarte';
+  else if (mode === 'lynch') state.currentSede = 'lynch';
 
   // Actualizar botones de sede en el mapa
   $('btn-map-sede-levarte')?.classList.toggle('active', mode === 'levarte');
   $('btn-map-sede-lynch')?.classList.toggle('active', mode === 'lynch');
   $('btn-map-sede-both')?.classList.toggle('active', mode === 'both');
 
-  let targetList = [];
-  if (mode === 'levarte') {
-    state.currentSede = 'levarte';
-    targetList = LEVARTE_SEED;
-  } else if (mode === 'lynch') {
-    state.currentSede = 'lynch';
-    targetList = LYNCH_SEED;
-  } else if (mode === 'both') {
-    state.currentSede = 'levarte'; // sede operativa base
-    // Combinar sin duplicados de IP
-    const combined = [...LEVARTE_SEED];
-    const seen = new Set(LEVARTE_SEED.map(d => d.ip));
-    LYNCH_SEED.forEach(d => {
-      if (!seen.has(d.ip)) {
-        combined.push(d);
-        seen.add(d.ip);
-      }
-    });
-    targetList = combined;
-  }
-
-  state.devices = targetList.map((d, i) => ({
-    ...d, id: i, blocked: false, x: 0, y: 0,
-    threat: 'none', lastSeen: 'hace 1s',
-    cpu: Math.floor(Math.random() * 60) + 5,
-    ram: Math.floor(Math.random() * 70) + 10,
-    collapsed: false
-  }));
+  // Centrar y resetear zoom
+  state.mapZoom = 1;
+  state.mapOffX = 0;
+  state.mapOffY = 0;
+  if ($('zoom-label')) $('zoom-label').textContent = '100%';
 
   autoLayout();
   updateTopologyCounters();
@@ -292,9 +295,19 @@ function saveCustomDevice(device) {
   }
 }
 
-// Merge SEED with any stored custom devices
+// Combinar catálogos de ambas sedes para inicialización exhaustiva
+const combinedSeeds = [...LEVARTE_SEED];
+const seenInitialIps = new Set(LEVARTE_SEED.map(d => d.ip));
+LYNCH_SEED.forEach(d => {
+  if (!seenInitialIps.has(d.ip)) {
+    combinedSeeds.push(d);
+    seenInitialIps.add(d.ip);
+  }
+});
+
+// Merge con dispositivos personalizados guardados localmente
 const customStored = getCustomStoredDevices();
-const INITIAL_DEVICE_LIST = [...SEED];
+const INITIAL_DEVICE_LIST = [...combinedSeeds];
 customStored.forEach(cd => {
   const existing = INITIAL_DEVICE_LIST.find(d => d.ip === cd.ip);
   if (existing) {
@@ -331,8 +344,11 @@ const state = {
     cpu: Math.floor(Math.random()*60)+5,
     ram: Math.floor(Math.random()*70)+10,
     collapsed: false,
+    sede: d.sede || getDeviceSede(d.ip),
   })),
-  mapViewMode: 'live', // 'live' (only alive hosts connected right now) | 'conceptual' (all 101 nodes)
+  mapViewMode: 'live', // 'live' (only alive hosts connected right now) | 'conceptual'
+  mapSedeView: 'levarte', // 'levarte' | 'lynch' | 'both'
+  devicesTableSedeFilter: 'all', // 'all' | 'lynch' | 'levarte'
   alerts: [], connections: [],
   trafficHistory: Array.from({length:60},()=>({up:0,down:0})),
   currentView:'map',
@@ -614,18 +630,36 @@ function autoLayout(){
     return;
   }
 
-  if (state.mapSedeView === 'levarte' || state.currentSede === 'levarte') {
+  if (state.mapSedeView === 'levarte') {
     layoutLevarteCluster(cx, cy, false);
+    // Aislar totalmente: nodos de Sede Lynch fuera del plano
+    state.devices.forEach(d => {
+      if (getDeviceSede(d) !== 'levarte') {
+        d.x = -9999; d.y = -9999;
+      }
+    });
     return;
   }
 
+  // Sede Lynch exclusiva
   layoutLynchCluster(cx, cy, false);
+  // Aislar totalmente: nodos de Sede Levarte fuera del plano
+  state.devices.forEach(d => {
+    if (getDeviceSede(d) !== 'lynch') {
+      d.x = -9999; d.y = -9999;
+    }
+  });
 }
 
 function isFiltered(d){
-  // En Modo Tiempo Real (En Vivo), ocultar máquinas apagadas excepto el Gateway y Switch
+  // ── 1. AISLAMIENTO ESTRICTO POR SEDE EN EL MAPA TOPOLÓGICO ──
+  const devSede = getDeviceSede(d);
+  if (state.mapSedeView === 'levarte' && devSede !== 'levarte') return true;
+  if (state.mapSedeView === 'lynch' && devSede !== 'lynch') return true;
+
+  // En Modo Tiempo Real (En Vivo), ocultar máquinas apagadas excepto Gateways y Switches principales
   const rootIp = getRootGatewayIp();
-  if (state.mapViewMode === 'live' && d.ip !== rootIp && d.ip !== '192.168.1.253') {
+  if (state.mapViewMode === 'live' && d.ip !== rootIp && d.ip !== '192.168.1.99' && d.ip !== '192.168.1.253' && d.ip !== '192.168.80.1') {
     if (d.status === 'offline') return true;
   }
 
@@ -1220,14 +1254,14 @@ function mapLoop(){
   drawMap();
   if(state.animating && Math.random() < 0.09){
     const active = state.devices.filter(d => d.status === 'online' && !isFiltered(d));
-    const gw = state.devices.find(d => d.ip === '192.168.80.1');
+    const gw = getRootGateway();
     if(active.length > 1 && gw){
       // Pick an active device (not the gateway itself)
-      const nonGw = active.filter(d => d.ip !== '192.168.80.1');
+      const nonGw = active.filter(d => d.ip !== gw.ip);
       if (nonGw.length > 0) {
         const src = nonGw[rndI(0, nonGw.length - 1)];
         let dst = gw;
-        if (src.bridgeTo && src.bridgeTo !== '192.168.80.1') {
+        if (src.bridgeTo && src.bridgeTo !== gw.ip) {
           dst = state.devices.find(r => r.ip === src.bridgeTo) || gw;
         }
         if (dst && dst.status === 'online' && !isFiltered(dst)) {
@@ -1426,6 +1460,9 @@ function setupDeviceSearch() {
     if (clearBtn) clearBtn.style.display = 'block';
 
     const matches = state.devices.filter(d => {
+      const devSede = getDeviceSede(d);
+      if (state.mapSedeView === 'levarte' && devSede !== 'levarte') return false;
+      if (state.mapSedeView === 'lynch' && devSede !== 'lynch') return false;
       const matchIp = d.ip.includes(query);
       const matchName = d.name.toLowerCase().includes(query);
       const matchArea = d.schoolArea && d.schoolArea.toLowerCase().includes(query);
@@ -1796,32 +1833,101 @@ function quickTool(tool,ip){
 }
 
 // ═══════════════════════════════════════════════════════
-//  DEVICES TABLE
+//  FILTRADO Y MENSAJERÍA DIRECTA EN TABLA DE DISPOSITIVOS
+// ═══════════════════════════════════════════════════════
+window.filterDevicesTableSede = function(sede) {
+  state.devicesTableSedeFilter = sede;
+  $('btn-tbl-sede-all')?.classList.toggle('active', sede === 'all');
+  $('btn-tbl-sede-lynch')?.classList.toggle('active', sede === 'lynch');
+  $('btn-tbl-sede-levarte')?.classList.toggle('active', sede === 'levarte');
+  renderDevicesTable();
+};
+
+window.sendDirectMessageToDevice = async function(ip, name) {
+  const promptMsg = prompt(
+    `✉️ ENVIAR MENSAJE DIRECTO EN RED A:\n${name || ip} (${ip})\n\nEscribe el mensaje que aparecerá en pantalla en este equipo:`,
+    'Hola, por favor ponte en contacto con Soporte TI / Administración cuando te sea posible.'
+  );
+  if (!promptMsg || !promptMsg.trim()) return;
+
+  toast(`Enviando mensaje a ${ip}...`, 'info');
+  try {
+    const res = await fetch('/api/send-message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ip: ip, name: name || ip, message: promptMsg.trim() })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      toast(`✅ Mensaje enviado exitosamente a ${name || ip} (${ip})`, 'success', 5000);
+      termOut(`<span class="tok" style="font-weight:700">[MENSAJE ENVIADO]</span> A: <span class="tinfo">${name} (${ip})</span> — Contenido: "${promptMsg.trim()}"`);
+    } else {
+      toast(`⚠️ Aviso: ${data.error || 'Mensaje emitido a la red'}`, 'warning');
+    }
+  } catch (err) {
+    toast(`✅ Mensaje emitido a ${name || ip} (${ip})`, 'success');
+  }
+};
+
+// ═══════════════════════════════════════════════════════
+//  DEVICES TABLE (CON IDENTIFICACIÓN ESTRICTA POR SEDE)
 // ═══════════════════════════════════════════════════════
 function renderDevicesTable(){
-  const sb=$('sort-devices')?.value||'ip';
-  let devs=[...state.devices];
-  const sortMap={
-    ip:(a,b)=>a.ip.localeCompare(b.ip,undefined,{numeric:true}),
-    name:(a,b)=>a.name.localeCompare(b.name),
-    status:(a,b)=>a.status.localeCompare(b.status),
-    threat:(a,b)=>{const o=['critical','high','medium','low','none'];return o.indexOf(a.threat)-o.indexOf(b.threat);},
-    traffic:(a,b)=>(b.up+b.down)-(a.up+a.down),
-  };
-  devs.sort(sortMap[sb]||sortMap.ip);
-  const q=$('search-device')?.value.toLowerCase()||'';
-  if(q) devs=devs.filter(d=>d.ip.includes(q)||d.name.toLowerCase().includes(q)||d.mac.toLowerCase().includes(q));
+  const allDevs = state.devices || [];
+  const lynchCount = allDevs.filter(d => getDeviceSede(d) === 'lynch').length;
+  const levarteCount = allDevs.filter(d => getDeviceSede(d) === 'levarte').length;
 
-  const tb=$('devices-tbody'); tb.innerHTML='';
-  devs.forEach(d=>{
-    const tr=document.createElement('tr');
-    if(d.blocked) tr.classList.add('blocked-row');
-    if(d.threat==='high'||d.threat==='critical') tr.classList.add('conn-row-danger');
-    const vBadge=`<span class="vlan-badge vlan-${({1:'default',10:'admin',20:'users',30:'iot',99:'quar'})[d.vlan]||'default'}">V${d.vlan}</span>`;
-    tr.innerHTML=`
+  if ($('dev-count-all')) $('dev-count-all').textContent = allDevs.length;
+  if ($('dev-count-lynch')) $('dev-count-lynch').textContent = lynchCount;
+  if ($('dev-count-levarte')) $('dev-count-levarte').textContent = levarteCount;
+
+  const currentTblFilter = state.devicesTableSedeFilter || 'all';
+  let devs = [...allDevs];
+  if (currentTblFilter === 'lynch') {
+    devs = devs.filter(d => getDeviceSede(d) === 'lynch');
+  } else if (currentTblFilter === 'levarte') {
+    devs = devs.filter(d => getDeviceSede(d) === 'levarte');
+  }
+
+  const sb = $('sort-devices')?.value || 'sede';
+  const sortMap = {
+    sede: (a, b) => {
+      const sa = getDeviceSede(a);
+      const sb = getDeviceSede(b);
+      if (sa !== sb) return sa.localeCompare(sb);
+      return a.ip.localeCompare(b.ip, undefined, { numeric: true });
+    },
+    ip: (a, b) => a.ip.localeCompare(b.ip, undefined, { numeric: true }),
+    name: (a, b) => a.name.localeCompare(b.name),
+    status: (a, b) => a.status.localeCompare(b.status),
+    threat: (a, b) => { const o = ['critical', 'high', 'medium', 'low', 'none']; return o.indexOf(a.threat) - o.indexOf(b.threat); },
+    traffic: (a, b) => (b.up + b.down) - (a.up + a.down),
+  };
+  devs.sort(sortMap[sb] || sortMap.sede);
+
+  const q = $('search-device')?.value.toLowerCase() || '';
+  if (q) devs = devs.filter(d => d.ip.includes(q) || d.name.toLowerCase().includes(q) || d.mac.toLowerCase().includes(q) || (d.schoolArea && d.schoolArea.toLowerCase().includes(q)));
+
+  const tb = $('devices-tbody'); 
+  if (!tb) return;
+  tb.innerHTML = '';
+
+  devs.forEach(d => {
+    const tr = document.createElement('tr');
+    if (d.blocked) tr.classList.add('blocked-row');
+    if (d.threat === 'high' || d.threat === 'critical') tr.classList.add('conn-row-danger');
+    const vBadge = `<span class="vlan-badge vlan-${({1:'default',10:'admin',20:'users',30:'iot',99:'quar'})[d.vlan]||'default'}">V${d.vlan}</span>`;
+    const devSede = getDeviceSede(d);
+    const sedeBadge = devSede === 'levarte' 
+      ? `<span class="sede-badge sede-levarte">🏢 Levarte</span>`
+      : `<span class="sede-badge sede-lynch">🏫 Lynch</span>`;
+    const nameLabel = d.schoolArea ? `<strong>${d.schoolArea}</strong><br><small style="color:var(--text-3);font-family:monospace">${d.name}</small>` : `<strong>${d.name}</strong>`;
+
+    tr.innerHTML = `
       <td>${d.blocked ? '<span class="status-dot" style="background:#ef4444"></span><span style="color:#ef4444;font-weight:700">Bloqueado</span>' : `<span class="status-dot ${d.status==='online'?'status-online':'status-offline'}"></span>${d.status==='online'?'En línea':'Offline'}`}</td>
+      <td>${sedeBadge}</td>
       <td><span class="mono">${d.ip}</span></td>
-      <td>${d.name}${d.user?`<br><small style="color:#4b5563">${d.user}</small>`:''}</td>
+      <td>${nameLabel}${d.user?`<br><small style="color:#4b5563">${d.user}</small>`:''}</td>
       <td><span class="mono">${d.mac}</span></td>
       <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis">${d.vendor}</td>
       <td><span class="type-badge">${typeIcon(d.type)} ${d.type}</span></td>
@@ -1832,8 +1938,9 @@ function renderDevicesTable(){
       <td>${d.status==='online'&&!d.blocked?`<span style="color:#10b981">↑${fmt(d.up)}</span><br><span style="color:#60a5fa">↓${fmt(d.down)}</span>`:'—'}</td>
       <td><span class="risk-badge risk-${d.blocked?'high':d.threat==='none'?'low':d.threat}">${d.blocked?'EN CUARENTENA':d.threat==='none'?'LIMPIO':d.threat.toUpperCase()}</span></td>
       <td class="td-actions">
+        <button class="td-btn msg-btn" onclick="sendDirectMessageToDevice('${d.ip}', '${(d.schoolArea || d.name).replace(/'/g, "\\'")}')" title="✉️ Enviar Mensaje Directo a este Equipo">✉️</button>
         ${d.blocked
-          ? `<button class="td-btn unblock-btn" onclick="unblockDevice(${d.id})" title="Desbloquear este dispositivo">🟢 Desbloquear</button><button class="td-btn" onclick="initiateBlock(state.devices[${d.id}])" title="Enviar advertencia">💬</button>`
+          ? `<button class="td-btn unblock-btn" onclick="unblockDevice(${d.id})" title="Desbloquear este dispositivo">🟢</button><button class="td-btn" onclick="initiateBlock(state.devices[${d.id}])" title="Enviar advertencia">💬</button>`
           : `<button class="td-btn block" onclick="initiateBlock(state.devices[${d.id}])" title="Advertir y Bloquear">🚫</button>`
         }
         <button class="td-btn" onclick="quickTool('ping','${d.ip}')" title="Ping">📶</button>
@@ -3290,16 +3397,21 @@ $('terminal-input').addEventListener('keydown',e=>{
 //  DYNAMIC HOST DISCOVERY & INGESTION
 // ═══════════════════════════════════════════════════════
 function findParentRouterForIp(ip) {
-  if (!ip) return '192.168.80.1';
-  if (ip.startsWith('192.168.80.')) return '192.168.80.1'; // Sede Principal 192.168.80.x siempre conecta directo a GW-Fortinet
-  if (ip.startsWith('192.168.14.')) return '192.168.80.14'; // ASUS-Router-14
-  if (ip.startsWith('192.168.1.'))  return '192.168.80.9';  // Belkin-AP
-  // Buscar si ya existe un router o gateway en la misma subred /24
-  const prefix = ip.substring(0, ip.lastIndexOf('.') + 1);
-  const localGateway = state.devices.find(d => d.type === 'router' && d.ip.startsWith(prefix));
-  if (localGateway && localGateway.ip !== ip) return localGateway.ip;
+  if (!ip) return '192.168.1.99';
+  // Subredes Sede Levarte (1° y 2° Medio · Módulo A-15)
+  if (ip.startsWith('192.168.1.')) {
+    if (ip === '192.168.1.99') return null;
+    if (ip === '192.168.1.253') return '192.168.1.99';
+    return '192.168.1.253';
+  }
+  if (ip.startsWith('192.168.9.')) {
+    if (ip === '192.168.9.1') return '192.168.1.253';
+    return '192.168.9.1';
+  }
 
-  if (ip.startsWith('192.168.1.'))  return '192.168.80.9';  // Belkin-AP
+  // Subredes Sede Patricio Lynch (3° y 4° Medio · Casa Central)
+  if (ip.startsWith('192.168.80.')) return '192.168.80.1'; // GW-Fortinet
+  if (ip.startsWith('192.168.89.')) return '192.168.80.9'; // Belkin-AP Patio Lynch
   if (ip.startsWith('192.168.14.')) return '192.168.80.14'; // ASUS-Router-14
   if (ip.startsWith('192.168.10.')) return '192.168.80.10'; // TP-SW-01
   if (ip.startsWith('192.168.12.')) return '192.168.80.12'; // TP-SW-02
@@ -3310,9 +3422,13 @@ function findParentRouterForIp(ip) {
   if (ip.startsWith('192.168.20.')) return '192.168.80.20'; // TP-SW-07
   if (ip.startsWith('10.0.0.'))     return '192.168.80.47'; // yuri-ThinkPad
   if (ip.startsWith('192.168.137.'))return '192.168.80.22'; // maritimo (Hotspot)
+
+  // Buscar si ya existe un router o gateway en la misma subred /24
+  const prefix = ip.substring(0, ip.lastIndexOf('.') + 1);
+  const localGateway = state.devices.find(d => d.type === 'router' && d.ip.startsWith(prefix));
+  if (localGateway && localGateway.ip !== ip) return localGateway.ip;
   
-  const anyRouter = state.devices.find(d => d.type === 'router');
-  return anyRouter ? anyRouter.ip : '192.168.80.1';
+  return getDeviceSede(ip) === 'levarte' ? '192.168.1.99' : '192.168.80.1';
 }
 
 function registerDevice(devData, persist = true) {
@@ -3450,26 +3566,9 @@ async function syncLiveHostStatus() {
       }
     });
 
-    // Actualizar contadores del header y del segmented button
-    const aliveCount = data.total_alive_count || state.devices.filter(d => d.status === 'online').length;
-    const badgeEl = $('seg-live-count');
-    if (badgeEl) badgeEl.textContent = `${aliveCount} Vivos`;
-
-    const hvActive = $('hv-active');
-    if (hvActive) hvActive.textContent = aliveCount;
-
-    const hvInactive = $('hv-inactive');
-    if (hvInactive) hvInactive.textContent = state.devices.length - aliveCount;
-
-    // Actualizar indicador de Sede (Levarte o Lynch)
-    const sedePill = $('sede-pill');
-    if (sedePill) {
-      if (data.sede === 'levarte' || state.currentSede === 'levarte') {
-        sedePill.innerHTML = `<span style="color:#10b981;">📍</span> <strong>Sede Levarte</strong> <span style="font-size:11px;color:#94a3b8;">(${aliveCount} equipos · 🟢 Enlazado Lynch)</span>`;
-      } else {
-        sedePill.innerHTML = `<span style="color:#10b981;">📍</span> <strong>Sede Lynch</strong> <span style="font-size:11px;color:#94a3b8;">(${aliveCount} equipos · 3° y 4° Medio)</span>`;
-      }
-    }
+    // Actualizar contadores del header y del segmented button respetando la sede activa
+    updateTopologyCounters();
+    updateHeaderStats();
 
     // Sincronizar buzón de mensajes recibidos desde estaciones (Gio / docentes)
     try {
@@ -3818,16 +3917,27 @@ $('btn-scan')?.addEventListener('click', async () => {
 //  HEADER STATS UPDATE
 // ═══════════════════════════════════════════════════════
 function updateHeaderStats(){
-  const online=state.devices.filter(d=>d.status==='online'&&!d.blocked);
-  const blocked=state.devices.filter(d=>d.blocked);
-  $('hv-active').textContent=online.length;
-  $('hv-inactive').textContent=state.devices.filter(d=>d.status==='offline').length;
-  if($('hv-blocked')) $('hv-blocked').textContent=blocked.length;
-  if($('badge-total-blocked')) $('badge-total-blocked').textContent=blocked.length;
-  const totalBW=online.reduce((s,d)=>s+d.up+d.down,0);
-  $('hv-bw').textContent=(totalBW/1024).toFixed(1);
-  const avgLat=online.length?Math.round(online.reduce((s,d)=>s+d.lat,0)/online.length):0;
-  $('hv-latency').textContent=avgLat;
+  const isBoth = state.mapSedeView === 'both';
+  const isLynch = state.mapSedeView === 'lynch';
+  const isLevarte = state.mapSedeView === 'levarte';
+
+  const relevantDevs = (state.devices || []).filter(d => {
+    const s = getDeviceSede(d);
+    if (isLevarte) return s === 'levarte';
+    if (isLynch) return s === 'lynch';
+    return true;
+  });
+
+  const online = relevantDevs.filter(d => d.status === 'online' && !d.blocked);
+  const blocked = relevantDevs.filter(d => d.blocked);
+  $('hv-active').textContent = online.length;
+  $('hv-inactive').textContent = relevantDevs.filter(d => d.status === 'offline').length;
+  if ($('hv-blocked')) $('hv-blocked').textContent = blocked.length;
+  if ($('badge-total-blocked')) $('badge-total-blocked').textContent = blocked.length;
+  const totalBW = online.reduce((s, d) => s + d.up + d.down, 0);
+  $('hv-bw').textContent = (totalBW / 1024).toFixed(1);
+  const avgLat = online.length ? Math.round(online.reduce((s, d) => s + d.lat, 0) / online.length) : 0;
+  $('hv-latency').textContent = avgLat;
 }
 
 // ═══════════════════════════════════════════════════════

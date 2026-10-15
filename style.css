@@ -3959,3 +3959,52 @@ tbody td{padding:9px 12px;font-size:11px;color:var(--text-2);white-space:nowrap}
   box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
 }
 
+/* ═══════════════════════════════════════════════════════
+   INSIGNIAS DE SEDE Y MENSAJE DIRECTO EN TABLA DE DISPOSITIVOS
+   ═══════════════════════════════════════════════════════ */
+.sede-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+.sede-badge.sede-lynch {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  color: #38bdf8;
+}
+.sede-badge.sede-levarte {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  color: #34d399;
+}
+
+.td-btn.msg-btn {
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.45);
+  color: #38bdf8;
+  transition: all 0.18s ease;
+}
+.td-btn.msg-btn:hover {
+  background: #38bdf8;
+  border-color: #38bdf8;
+  color: #050b18;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+  transform: scale(1.08);
+}
+
+.btn-tool-sm.active {
+  background: rgba(0, 245, 255, 0.22) !important;
+  border-color: #00f5ff !important;
+  color: #00f5ff !important;
+  box-shadow: 0 0 10px rgba(0, 245, 255, 0.4) !important;
+  font-weight: 700;
+}
+
+
+

@@ -446,7 +446,13 @@
       <div class="view-header">
         <h2>Inventario de Dispositivos</h2>
         <div class="view-controls">
+          <div class="devices-sede-filter" style="display:inline-flex;gap:6px;align-items:center;">
+            <button class="btn-tool-sm active" id="btn-tbl-sede-all" onclick="filterDevicesTableSede('all')" title="Ver todos los dispositivos de ambas sedes">🌐 Ambas Sedes (<span id="dev-count-all">--</span>)</button>
+            <button class="btn-tool-sm" id="btn-tbl-sede-lynch" onclick="filterDevicesTableSede('lynch')" title="Ver exclusivamente dispositivos de Sede Patricio Lynch">🏫 Sede Lynch (<span id="dev-count-lynch">--</span>)</button>
+            <button class="btn-tool-sm" id="btn-tbl-sede-levarte" onclick="filterDevicesTableSede('levarte')" title="Ver exclusivamente dispositivos de Sede Levarte">🏢 Sede Levarte (<span id="dev-count-levarte">--</span>)</button>
+          </div>
           <select id="sort-devices" class="select-sm">
+            <option value="sede">Por Sede</option>
             <option value="ip">Por IP</option>
             <option value="name">Por nombre</option>
             <option value="status">Por estado</option>
@@ -459,7 +465,7 @@
         <table id="devices-table">
           <thead>
             <tr>
-              <th>Estado</th><th>IP</th><th>Nombre</th><th>MAC</th>
+              <th>Estado</th><th>Sede</th><th>IP</th><th>Nombre / Área</th><th>MAC</th>
               <th>Fabricante</th><th>Tipo</th><th>VLAN</th>
               <th>Latencia</th><th>Jitter</th><th>Pkt Loss</th>
               <th>Trafico</th><th>Amenaza</th><th>Acciones</th>

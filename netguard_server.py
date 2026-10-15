@@ -244,14 +244,14 @@ WEB_AUDIT_LOG = []
 def init_web_audit_log():
     """Genera el registro histórico inicial de auditoría web para la red del colegio"""
     known_devices = [
-        {"ip": "192.168.1.15", "name": "Samsung-Galaxy-S23 (Celular Alumno)", "type": "mobile"},
-        {"ip": "192.168.1.28", "name": "iPhone-15-Invitado (Celular)", "type": "mobile"},
+        {"ip": "192.168.89.15", "name": "Samsung-Galaxy-S23 (Celular Alumno)", "type": "mobile"},
+        {"ip": "192.168.89.28", "name": "iPhone-15-Invitado (Celular)", "type": "mobile"},
         {"ip": "192.168.80.22", "name": "maritimo (Mi PC / Soporte TI)", "type": "pc"},
         {"ip": "192.168.80.47", "name": "yuri-ThinkPad (Servidor / TI)", "type": "server"},
         {"ip": "192.168.80.71", "name": "Workstation-71 (Sala Computación)", "type": "pc"},
         {"ip": "192.168.80.61", "name": "Workstation-61 (Sala Computación)", "type": "pc"},
-        {"ip": "192.168.1.55", "name": "MacBook-Air-M2 (Laptop Docente)", "type": "pc"},
-        {"ip": "192.168.1.75", "name": "iPad-Pro-M2 (Tablet Alumno)", "type": "mobile"},
+        {"ip": "192.168.89.55", "name": "MacBook-Air-M2 (Laptop Docente)", "type": "pc"},
+        {"ip": "192.168.89.75", "name": "iPad-Pro-M2 (Tablet Alumno)", "type": "mobile"},
         {"ip": "192.168.15.98", "name": "HMI-Supervisor-Planta (Elaboración Industrial)", "type": "pc"},
         {"ip": "192.168.17.13", "name": "Sim-Grua-STS-01 (Operaciones Portuarias)", "type": "pc"},
         {"ip": "192.168.17.57", "name": "Servidor-TOS-Naviero (Operaciones Portuarias)", "type": "server"},
@@ -476,14 +476,14 @@ BRANCH_DEVICES = {
         {"ip": "192.168.80.71", "mac": "08:8F:C3:B6:65:95", "name": "Workstation-71 (FP Taller CAD)", "type": "pc"},
         {"ip": "192.168.80.72", "mac": "08:8F:C3:B6:64:9A", "name": "Workstation-72 (FP Puesto 4)", "type": "pc"},
     ],
-    # 192.168.80.9: Belkin-AP · Patio Central / WiFi Alumnos
+    # 192.168.80.9: Belkin-AP · Patio Central / WiFi Alumnos (Subred 192.168.89.x)
     "192.168.80.9": [
-        {"ip": "192.168.1.1", "mac": "C0:56:27:6F:87:40", "name": "Belkin-WiFi-Router (Patio)", "type": "router"},
-        {"ip": "192.168.1.15", "mac": "3C:7A:8A:12:44:B1", "name": "Samsung-Galaxy-S23 (Alumno Patio)", "type": "pc"},
-        {"ip": "192.168.1.28", "mac": "F0:D1:A9:7B:88:C2", "name": "iPhone-15-Invitado (Patio)", "type": "pc"},
-        {"ip": "192.168.1.42", "mac": "A8:23:FE:45:90:1D", "name": "SmartTV-LG-OLED (Patio Mural)", "type": "pc"},
-        {"ip": "192.168.1.55", "mac": "74:D0:2B:66:31:FE", "name": "MacBook-Air-M2 (Laptop Docente)", "type": "pc"},
-        {"ip": "192.168.1.100", "mac": "D4:F5:47:88:29:A0", "name": "Chromecast-4K (Patio Multimedia)", "type": "pc"},
+        {"ip": "192.168.89.1", "mac": "C0:56:27:6F:87:40", "name": "Belkin-WiFi-Router (Patio)", "type": "router"},
+        {"ip": "192.168.89.15", "mac": "3C:7A:8A:12:44:B1", "name": "Samsung-Galaxy-S23 (Alumno Patio)", "type": "pc"},
+        {"ip": "192.168.89.28", "mac": "F0:D1:A9:7B:88:C2", "name": "iPhone-15-Invitado (Patio)", "type": "pc"},
+        {"ip": "192.168.89.42", "mac": "A8:23:FE:45:90:1D", "name": "SmartTV-LG-OLED (Patio Mural)", "type": "pc"},
+        {"ip": "192.168.89.55", "mac": "74:D0:2B:66:31:FE", "name": "MacBook-Air-M2 (Laptop Docente)", "type": "pc"},
+        {"ip": "192.168.89.100", "mac": "D4:F5:47:88:29:A0", "name": "Chromecast-4K (Patio Multimedia)", "type": "pc"},
     ],
     # 192.168.80.20: TP-SW-07 · Pabellón Clases Norte
     "192.168.80.20": [
@@ -1561,11 +1561,16 @@ class NetGuardRequestHandler(SimpleHTTPRequestHandler):
             self.end_headers()
             
             online_ips = [ip for ip, data in LIVE_HOSTS_CACHE.items() if data.get("is_online")]
+            lynch_alive = sum(1 for ip, d in LIVE_HOSTS_CACHE.items() if d.get("is_online") and d.get("sede") == "lynch")
+            levarte_alive = sum(1 for ip, d in LIVE_HOSTS_CACHE.items() if d.get("is_online") and d.get("sede") == "levarte")
             self.wfile.write(json.dumps({
                 "success": True,
                 "server_time": time.strftime("%H:%M:%S"),
                 "my_ip": MY_IP,
+                "current_sede": CURRENT_SEDE,
                 "total_alive_count": len(online_ips),
+                "lynch_alive_count": lynch_alive,
+                "levarte_alive_count": levarte_alive,
                 "online_ips": online_ips,
                 "hosts": LIVE_HOSTS_CACHE
             }).encode('utf-8'))
@@ -1729,7 +1734,7 @@ class NetGuardRequestHandler(SimpleHTTPRequestHandler):
                                 "area": "240 m²",
                                 "color": "#f59e0b",
                                 "router_gw": "192.168.80.9",
-                                "ips": ["192.168.80.9", "192.168.1.1", "192.168.1.15", "192.168.1.28", "192.168.1.42", "192.168.1.55", "192.168.1.100"],
+                                "ips": ["192.168.80.9", "192.168.89.1", "192.168.89.15", "192.168.89.28", "192.168.89.42", "192.168.89.55", "192.168.89.100"],
                                 "descripcion": "Zona central abierta con Access Point Belkin, SmartTV informativo y WiFi Alumnos"
                             },
                             {
