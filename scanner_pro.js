@@ -55,6 +55,22 @@ const EXTENSION_SUBNETS = {
     ]
   },
 
+  // 1.5. Portería / Control Acceso & Reloj Control Biométrico · Sede Lynch (Octeto 3 · 192.168.3.0/24)
+  '192.168.3.0/24': {
+    name: 'Portería / Control Acceso & Reloj Control Biométrico · Sede Lynch (192.168.3.0/24)',
+    gateway: '192.168.3.1',
+    bridgeRouter: '192.168.80.1',
+    vlan: 1,
+    devices: [
+      { ip:'192.168.3.1',  name:'GW-Router-Porteria',        mac:'00:1A:2B:33:03:01', vendor:'TP-Link SafeStream / Cisco', type:'router',  lat:2, ports:[80,443,22,23] },
+      { ip:'192.168.3.17', name:'Reloj-Biometrico-Lynch',    mac:'00:17:61:33:03:17', vendor:'ZKTeco iClock / BioTime',     type:'server',  lat:2, ports:[80,4370] },
+      { ip:'192.168.3.10', name:'PC-Porteria-Acceso',        mac:'08:8F:C3:33:03:10', vendor:'HP Inc.',                     type:'pc',      lat:3, ports:[135,445] },
+      { ip:'192.168.3.15', name:'Torniquete-Peatonal-IP',    mac:'00:50:C2:33:03:15', vendor:'ZKTeco SpeedFace',              type:'pc',      lat:2, ports:[80,4370] },
+      { ip:'192.168.3.20', name:'Cam-LPR-Acceso-Vehicular',  mac:'BC:54:51:33:03:20', vendor:'Hikvision LPR',              type:'server',  lat:3, ports:[80,554,8000] },
+      { ip:'192.168.3.25', name:'Impresora-Tickets-Visita',  mac:'38:22:E2:33:03:25', vendor:'Epson / HP Tickets',          type:'printer', lat:4, ports:[80,9100] },
+    ]
+  },
+
   // 2. TP-SW-01 (192.168.80.10) - 90:9A:4A:1A:89:9E
   '192.168.10.0/24': {
     name: 'Extensión Oficina Principal / Cascada · TP-SW-01',

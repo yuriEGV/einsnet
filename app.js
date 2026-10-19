@@ -94,6 +94,14 @@ const LYNCH_SEED = [
   // Extensión Hotspot / Adaptador Secundario (192.168.137.x)
   { ip:'192.168.137.157', name:'Host-Hotspot-157', schoolArea:'Hotspot Móvil Docente', mac:'F8:E4:E3:EB:22:6F', vendor:'Dispositivo Móvil / Hotspot', type:'pc',      vlan:20, status:'online',  lat:9,  jitter:1.1, loss:0, up:180, down:490,  bridgeTo:'192.168.80.22' },
   { ip:'192.168.137.219', name:'Host-Hotspot-219', schoolArea:'Hotspot Móvil Sala 2', mac:'98:0D:51:70:09:3D', vendor:'Dispositivo Móvil / Hotspot', type:'pc',      vlan:20, status:'online',  lat:12, jitter:1.4, loss:0, up:120, down:380,  bridgeTo:'192.168.80.22' },
+
+  // Extensión Portería / Control Acceso & Reloj Control Biométrico (Octeto 3 · Subred 192.168.3.x)
+  { ip:'192.168.3.1',   name:'GW-Router-Porteria', schoolArea:'Portería / Gateway Acceso Principal', mac:'00:1A:2B:33:03:01', vendor:'TP-Link SafeStream / Cisco', type:'router',  vlan:1,  status:'online',  lat:2,  jitter:0.3, loss:0, up:320, down:850, bridgeTo:'192.168.80.1' },
+  { ip:'192.168.3.17',  name:'Reloj-Biometrico-Lynch', schoolArea:'Portería / Reloj Control Biométrico Asistencia', mac:'00:17:61:33:03:17', vendor:'ZKTeco iClock / BioTime', type:'server',  vlan:1,  status:'online',  lat:2,  jitter:0.2, loss:0, up:90,  down:140, bridgeTo:'192.168.3.1' },
+  { ip:'192.168.3.10',  name:'PC-Porteria-Acceso', schoolArea:'Portería / Puesto Guardia & Visitas', mac:'08:8F:C3:33:03:10', vendor:'HP Inc.',                     type:'pc',      vlan:1,  status:'online',  lat:3,  jitter:0.4, loss:0, up:180, down:450, bridgeTo:'192.168.3.1' },
+  { ip:'192.168.3.15',  name:'Torniquete-Peatonal-IP', schoolArea:'Portería / Control Acceso Peatonal', mac:'00:50:C2:33:03:15', vendor:'ZKTeco SpeedFace',              type:'pc',      vlan:1,  status:'online',  lat:2,  jitter:0.3, loss:0, up:60,  down:110, bridgeTo:'192.168.3.1' },
+  { ip:'192.168.3.20',  name:'Cam-LPR-Acceso-Vehicular', schoolArea:'Acceso Vehicular / Cámara LPR Patentes', mac:'BC:54:51:33:03:20', vendor:'Hikvision LPR',              type:'server',  vlan:1,  status:'online',  lat:3,  jitter:0.4, loss:0, up:850, down:190, bridgeTo:'192.168.3.1' },
+  { ip:'192.168.3.25',  name:'Impresora-Tickets-Visita', schoolArea:'Portería / Impresora Pases de Acceso', mac:'38:22:E2:33:03:25', vendor:'Epson / HP Tickets',          type:'printer', vlan:1,  status:'online',  lat:4,  jitter:0.5, loss:0, up:40,  down:90,  bridgeTo:'192.168.3.1' },
 ];
 
 // ═══════════════════════════════════════════════════════
@@ -411,6 +419,8 @@ document.querySelectorAll('.nav-item').forEach(btn=>{
     if(v==='web-audit') renderWebAudit();
     if(v==='plano-lynch') renderPlanoLynch();
     if(v==='bridge') renderBridgeView();
+    if(v==='antitheft') renderAntitheftView();
+    if(v==='routers') renderRoutersView();
   });
 });
 
@@ -3410,6 +3420,10 @@ function findParentRouterForIp(ip) {
   }
 
   // Subredes Sede Patricio Lynch (3° y 4° Medio · Casa Central)
+  if (ip.startsWith('192.168.3.')) {
+    if (ip === '192.168.3.1') return '192.168.80.1'; // GW-Router-Porteria enlaza a GW-Fortinet
+    return '192.168.3.1'; // Reloj Biométrico 192.168.3.17 y equipos de Portería enlazan a GW-Router-Porteria
+  }
   if (ip.startsWith('192.168.80.')) return '192.168.80.1'; // GW-Fortinet
   if (ip.startsWith('192.168.89.')) return '192.168.80.9'; // Belkin-AP Patio Lynch
   if (ip.startsWith('192.168.14.')) return '192.168.80.14'; // ASUS-Router-14
@@ -4805,6 +4819,8 @@ function init(){
   initAddHostModal();
   setupDeviceSearch();
   initModalSubyugadasEvents();
+  initAntitheftModule();
+  initRoutersModule();
   syncLiveHostStatus();
   setInterval(syncLiveHostStatus, 3500);
 
@@ -5027,6 +5043,7 @@ async function renderPlanoLynch() {
         { id: 'quimica', label: '🧪 Química' },
         { id: 'ufp', label: '📐 UFP / CAD' },
         { id: 'admin', label: '🏢 Administración' },
+        { id: 'porteria', label: '🕒 Portería & Reloj Asistencia' },
         { id: 'aulas', label: '📚 Aulas 3°/4°' },
       ];
       lynChips.forEach(c => {
@@ -5629,10 +5646,557 @@ function initBridgeEvents() {
   }, 4000);
 }
 
+// ═══════════════════════════════════════════════════════════════════
+//  MÓDULO: ESCUDO ANTIRROBO DE ACTIVOS DE RED (ANTI-THEFT SHIELD)
+// ═══════════════════════════════════════════════════════════════════
+let theftAudioCtx = null;
+
+function playTheftAlarmSound() {
+  try {
+    if (!theftAudioCtx) theftAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (theftAudioCtx.state === 'suspended') theftAudioCtx.resume();
+    const now = theftAudioCtx.currentTime;
+    const osc = theftAudioCtx.createOscillator();
+    const gain = theftAudioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(850, now);
+    osc.frequency.linearRampToValueAtTime(1400, now + 0.3);
+    osc.frequency.linearRampToValueAtTime(850, now + 0.6);
+    osc.frequency.linearRampToValueAtTime(1400, now + 0.9);
+    osc.frequency.linearRampToValueAtTime(850, now + 1.2);
+    gain.gain.setValueAtTime(0.25, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 1.3);
+    osc.connect(gain);
+    gain.connect(theftAudioCtx.destination);
+    osc.start(now);
+    osc.stop(now + 1.3);
+  } catch (e) {
+    console.warn('Audio no inicializado:', e);
+  }
+}
+
+let antitheftDataCache = null;
+
+async function fetchAntitheftStatus() {
+  try {
+    const res = await fetch('/api/antitheft/status');
+    if (res.ok) {
+      antitheftDataCache = await res.json();
+      updateAntitheftHeader(antitheftDataCache);
+      return antitheftDataCache;
+    }
+  } catch (e) {
+    console.warn('Error obteniendo estado antirrobo:', e);
+  }
+  return null;
+}
+
+function updateAntitheftHeader(data) {
+  if (!data) return;
+  const isArmed = Boolean(data.armed);
+  const isAlarm = Boolean(data.alarm_active);
+  const badge = $('antitheft-badge');
+  const hBtn = $('btn-header-antitheft');
+  const hText = $('header-antitheft-text');
+  const hIcon = $('header-antitheft-icon');
+
+  if (badge) {
+    badge.textContent = isAlarm ? '🚨 ALARMA' : (isArmed ? 'ARMADO' : 'OFF');
+    badge.style.background = isAlarm ? '#ef4444' : (isArmed ? '#dc2626' : '#64748b');
+    badge.classList.toggle('pulse-emergency', isAlarm);
+  }
+  if (hText) {
+    hText.textContent = isAlarm ? '¡ROBO EN CURSO!' : (isArmed ? 'Antirrobo: ARMADO' : 'Antirrobo: OFF');
+  }
+  if (hIcon) {
+    hIcon.textContent = isAlarm ? '🚨' : (isArmed ? '🛡️' : '🔓');
+  }
+  if (hBtn) {
+    if (isAlarm) {
+      hBtn.style.borderColor = '#ef4444';
+      hBtn.style.background = '#ef4444';
+      hBtn.style.color = '#ffffff';
+      hBtn.classList.add('pulse-emergency');
+    } else if (isArmed) {
+      hBtn.style.borderColor = '#ef4444';
+      hBtn.style.background = 'rgba(239,68,68,0.18)';
+      hBtn.style.color = '#f87171';
+      hBtn.classList.remove('pulse-emergency');
+    } else {
+      hBtn.style.borderColor = '#475569';
+      hBtn.style.background = 'transparent';
+      hBtn.style.color = '#94a3b8';
+      hBtn.classList.remove('pulse-emergency');
+    }
+  }
+  if (isAlarm) {
+    playTheftAlarmSound();
+  }
+}
+
+async function renderAntitheftView() {
+  const data = await fetchAntitheftStatus();
+  if (!data) return;
+
+  const isArmed = Boolean(data.armed);
+  const isAlarm = Boolean(data.alarm_active);
+
+  const tBtn = $('btn-antitheft-toggle-view');
+  if (tBtn) {
+    tBtn.textContent = isArmed ? '🔓 Desarmar Sistema' : '🛡️ Armar Sistema';
+    tBtn.style.background = isArmed ? '#334155' : '#ef4444';
+    tBtn.style.borderColor = isArmed ? '#475569' : '#ef4444';
+  }
+
+  const banner = $('antitheft-active-banner');
+  const bannerMsg = $('antitheft-banner-msg');
+  if (banner) {
+    if (isAlarm && data.last_alarm) {
+      banner.style.display = 'flex';
+      if (bannerMsg) {
+        bannerMsg.textContent = `¡Desconexión imprevista detectada! Equipo: ${data.last_alarm.name} (${data.last_alarm.ip}) en ${data.last_alarm.area} · Sede ${data.last_alarm.sede?.toUpperCase()}`;
+      }
+    } else {
+      banner.style.display = 'none';
+    }
+  }
+
+  const stArmed = $('stat-antitheft-armed');
+  const stIcon = $('stat-antitheft-icon');
+  const stSub = $('stat-antitheft-sub');
+  const cStatus = $('card-antitheft-status');
+  if (stArmed) {
+    stArmed.textContent = isArmed ? 'ARMADO (ACTIVO)' : 'DESARMADO';
+    stArmed.style.color = isArmed ? '#ef4444' : '#34d399';
+  }
+  if (stIcon) stIcon.textContent = isArmed ? '🛡️' : '🔓';
+  if (stSub) stSub.textContent = isArmed ? `Activado por ${data.armed_by || 'Administrador'}` : 'Listo para vigilancia nocturna o 24/7';
+  if (cStatus) {
+    cStatus.className = `antitheft-stat-card ${isArmed ? 'armed' : 'safe'}`;
+  }
+
+  const stCount = $('stat-antitheft-count');
+  if (stCount) stCount.textContent = `${data.protected_count || 0} Equipos`;
+
+  const aliveCount = (data.assets || []).filter(a => a.is_online).length;
+  const totalAssets = (data.assets || []).length;
+  const pct = totalAssets ? Math.round((aliveCount / totalAssets) * 100) : 100;
+  const stAlive = $('stat-antitheft-alive');
+  if (stAlive) stAlive.textContent = `${pct}% Online (${aliveCount}/${totalAssets})`;
+
+  const stInc = $('stat-antitheft-incidents');
+  if (stInc) stInc.textContent = `${(data.incidents || []).length} Eventos`;
+
+  const tbody = $('tbody-antitheft-assets');
+  if (tbody) {
+    const q = ($('antitheft-search')?.value || '').toLowerCase().trim();
+    const filtered = (data.assets || []).filter(a => {
+      if (!q) return true;
+      return a.name.toLowerCase().includes(q) || a.ip.includes(q) || a.area.toLowerCase().includes(q) || a.sede.toLowerCase().includes(q);
+    });
+
+    tbody.innerHTML = filtered.map(a => {
+      const isCrit = a.is_critical;
+      const isOnline = a.is_online;
+      const sedeClass = a.sede === 'lynch' ? 'sede-lynch' : 'sede-levarte';
+      const sedeLabel = a.sede === 'lynch' ? '🏫 Lynch' : '📍 Levarte';
+      return `
+        <tr style="${!isOnline ? 'background:rgba(239,68,68,0.12);' : ''}">
+          <td>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:18px;">${a.type === 'router' ? '📡' : (a.type === 'printer' ? '🖨️' : (a.type === 'server' ? '⏰' : '🖥️'))}</span>
+              <div>
+                <strong>${escapeHtml(a.name)}</strong>
+                ${isCrit ? '<span class="asset-badge-critical" style="margin-left:6px;">CRÍTICO</span>' : ''}
+              </div>
+            </div>
+          </td>
+          <td><code class="mono" style="color:#00f5ff;">${a.ip}</code><br><small style="color:#64748b;">${a.mac}</small></td>
+          <td><span class="sede-badge ${sedeClass}">${sedeLabel}</span></td>
+          <td style="font-size:11.5px;color:#cbd5e1;">${escapeHtml(a.area)}</td>
+          <td>${isCrit ? '<span style="color:#f87171;font-weight:700;">Alta (Alarma Máxima)</span>' : '<span style="color:#94a3b8;">Estándar</span>'}</td>
+          <td>
+            ${isOnline
+              ? '<span style="color:#10b981;font-weight:600;"><span class="pulse-green-dot"></span> Conectado</span>'
+              : '<span style="color:#ef4444;font-weight:700;"><span class="pulse-red-dot"></span> DESCONECTADO</span>'
+            }
+          </td>
+          <td>
+            <label class="switch-sm" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
+              <input type="checkbox" checked class="antitheft-ip-toggle" data-ip="${a.ip}">
+              <span style="font-size:11px;color:#34d399;font-weight:600;">Monitoreado</span>
+            </label>
+          </td>
+          <td>
+            <button class="btn-sm btn-antitheft-single-test" data-ip="${a.ip}" title="Probar alarma de hurto en este activo" style="border-color:#f59e0b;color:#f59e0b;padding:2px 8px;">Simular Hurto</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    tbody.querySelectorAll('.antitheft-ip-toggle').forEach(chk => {
+      chk.addEventListener('change', async () => {
+        const ip = chk.dataset.ip;
+        await fetch('/api/antitheft/protect-ip', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ ip })
+        });
+        toast(`Vigilancia actualizada para ${ip}`, 'info');
+      });
+    });
+
+    tbody.querySelectorAll('.btn-antitheft-single-test').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const ip = btn.dataset.ip;
+        toast(`Simulando intento de sustracción para ${ip}...`, 'warning');
+        await fetch('/api/antitheft/test-alarm', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ ip })
+        });
+        renderAntitheftView();
+      });
+    });
+  }
+
+  const logTbody = $('tbody-antitheft-log');
+  if (logTbody) {
+    logTbody.innerHTML = (data.incidents || []).map(inc => {
+      const isCrit = inc.severity === 'CRITICAL' || inc.severity === 'high';
+      return `
+        <tr style="${isCrit ? 'background:rgba(239,68,68,0.1);' : ''}">
+          <td class="mono" style="font-size:11px;color:#94a3b8;">${escapeHtml(inc.timestamp || '')}</td>
+          <td>
+            <span style="font-weight:700;color:${isCrit ? '#f87171' : '#38bdf8'};">
+              ${escapeHtml(inc.type || 'EVENTO')}
+            </span>
+          </td>
+          <td>
+            <strong>${escapeHtml(inc.name || inc.ip || '')}</strong>
+            <br><code class="mono" style="font-size:10.5px;color:#64748b;">${escapeHtml(inc.ip || '')}</code>
+          </td>
+          <td style="font-size:11px;color:#cbd5e1;">
+            ${escapeHtml(inc.area || '')} · <span style="text-transform:uppercase;">${escapeHtml(inc.sede || '')}</span>
+          </td>
+          <td style="font-size:11.5px;color:${isCrit ? '#fca5a5' : '#cbd5e1'};">
+            ${escapeHtml(inc.reason || inc.details || '')}
+          </td>
+          <td>
+            <span class="badge ${isCrit ? 'badge-danger' : 'badge-info'}" style="font-size:10px;">
+              ${escapeHtml(inc.severity || 'INFO')}
+            </span>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+}
+
+function initAntitheftModule() {
+  $('btn-header-antitheft')?.addEventListener('click', async () => {
+    if (antitheftDataCache?.alarm_active) {
+      await fetch('/api/antitheft/dismiss-alarm', { method: 'POST' });
+      toast('Alarma silenciada por el Administrador', 'info');
+      fetchAntitheftStatus();
+      return;
+    }
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    $('nav-antitheft')?.classList.add('active');
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    $('view-antitheft')?.classList.add('active');
+    state.currentView = 'antitheft';
+    renderAntitheftView();
+  });
+
+  $('btn-antitheft-toggle-view')?.addEventListener('click', async () => {
+    const res = await fetch('/api/antitheft/toggle', { method: 'POST' });
+    if (res.ok) {
+      const d = await res.json();
+      toast(d.message || 'Estado del Escudo modificado', d.armed ? 'warning' : 'info');
+      renderAntitheftView();
+    }
+  });
+
+  $('btn-antitheft-test-alarm')?.addEventListener('click', async () => {
+    toast('🚨 Iniciando simulacro de robo en vivo...', 'warning');
+    const res = await fetch('/api/antitheft/test-alarm', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ ip: '192.168.3.17' })
+    });
+    if (res.ok) {
+      renderAntitheftView();
+    }
+  });
+
+  $('btn-antitheft-silence')?.addEventListener('click', async () => {
+    await fetch('/api/antitheft/dismiss-alarm', { method: 'POST' });
+    toast('🔇 Sirena de alarma silenciada', 'info');
+    renderAntitheftView();
+  });
+
+  $('btn-antitheft-dismiss-banner')?.addEventListener('click', async () => {
+    await fetch('/api/antitheft/dismiss-alarm', { method: 'POST' });
+    toast('Alarma desactivada', 'info');
+    renderAntitheftView();
+  });
+
+  $('btn-antitheft-refresh')?.addEventListener('click', () => {
+    toast('Actualizando inventario de activos...', 'info');
+    renderAntitheftView();
+  });
+
+  $('antitheft-search')?.addEventListener('input', () => {
+    renderAntitheftView();
+  });
+
+  setInterval(() => {
+    fetchAntitheftStatus();
+    if (state.currentView === 'antitheft') {
+      renderAntitheftView();
+    }
+  }, 4000);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  MÓDULO: CONTROL DE ROUTERS & BÓVEDA DE CREDENCIALES
+// ═══════════════════════════════════════════════════════════════════
+let routersSedeFilter = 'all';
+
+async function renderRoutersView() {
+  const container = $('routers-cards-container');
+  if (!container) return;
+
+  try {
+    const res = await fetch('/api/routers/catalog');
+    if (!res.ok) {
+      container.innerHTML = '<div style="padding:20px;color:#ef4444;">No se pudo consultar el catálogo de routers.</div>';
+      return;
+    }
+    const data = await res.json();
+    const routers = data.routers || [];
+
+    const cliSel = $('router-cli-select');
+    if (cliSel && cliSel.options.length === 0) {
+      cliSel.innerHTML = routers.map(r => `<option value="${r.ip}">[${r.sede.toUpperCase()}] ${r.name} (${r.ip})</option>`).join('');
+    }
+
+    const filtered = routers.filter(r => {
+      if (routersSedeFilter === 'all') return true;
+      return r.sede === routersSedeFilter;
+    });
+
+    container.innerHTML = filtered.map(r => {
+      const isIso = Boolean(r.is_isolated);
+      const isLynch = r.sede === 'lynch';
+      const sedeClass = isLynch ? 'sede-lynch' : 'sede-levarte';
+      const sedeLabel = isLynch ? '🏫 Sede Lynch' : '📍 Sede Levarte';
+      const openPortsStr = (r.open_ports || []).map(p => `:${p}`).join(', ');
+
+      return `
+        <div class="router-card" style="${isIso ? 'border-color:#ef4444;background:rgba(239,68,68,0.06);' : ''}">
+          <div class="router-card-header">
+            <div>
+              <span class="sede-badge ${sedeClass}" style="margin-bottom:4px;">${sedeLabel}</span>
+              <h3 style="font-size:14px;color:#f8fafc;margin:2px 0;">${escapeHtml(r.name)}</h3>
+              <code class="mono" style="font-size:12px;color:#00f5ff;">${r.ip}</code>
+            </div>
+            <div style="text-align:right;">
+              ${isIso 
+                ? '<span class="badge badge-danger" style="font-size:10px;">🔴 INTERNET CORTADO</span>'
+                : '<span class="badge badge-success" style="font-size:10px;"><span class="pulse-green-dot"></span> OPERATIVO</span>'
+              }
+              <div style="margin-top:4px;">
+                <span class="auth-badge verified">🔑 ${escapeHtml(r.matched_user)} : ${escapeHtml(r.matched_password)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="font-size:11.5px;color:#94a3b8;line-height:1.4;">
+            <div><strong>Sector:</strong> <span style="color:#cbd5e1;">${escapeHtml(r.area)}</span></div>
+            <div><strong>Subred / Segmento:</strong> <code class="mono" style="color:#a78bfa;">${r.subnet}</code></div>
+            <div><strong>Fabricante:</strong> ${escapeHtml(r.vendor)}</div>
+            <div><strong>Puertos Abiertos:</strong> <span style="color:#34d399;font-family:var(--mono);">${openPortsStr || 'Web :80'}</span></div>
+            <div><strong>Estaciones Enlazadas:</strong> <span style="color:#38bdf8;font-weight:700;">${r.child_count} dispositivos</span></div>
+            ${r.notes ? `<div style="font-size:10.5px;color:#64748b;margin-top:2px;">${escapeHtml(r.notes)}</div>` : ''}
+          </div>
+
+          <div class="router-card-actions">
+            <button class="btn-sm btn-router-probe" data-ip="${r.ip}" style="border-color:#38bdf8;color:#38bdf8;">🔑 Probar Acceso</button>
+            <a href="http://${r.ip}" target="_blank" class="btn-sm" style="border-color:var(--cyan);color:var(--cyan);text-decoration:none;display:inline-flex;align-items:center;">🌐 Web Admin</a>
+            ${isIso 
+              ? `<button class="btn-sm btn-router-restore" data-ip="${r.ip}" style="border-color:#10b981;color:#34d399;font-weight:700;">🟢 Restaurar Internet</button>`
+              : `<button class="btn-sm btn-router-cut" data-ip="${r.ip}" style="border-color:#ef4444;color:#f87171;font-weight:700;">⚡ Cortar Internet</button>`
+            }
+            <button class="btn-sm btn-router-reboot" data-ip="${r.ip}" style="border-color:#f59e0b;color:#fbbf24;">🔄 Reiniciar</button>
+            <button class="btn-sm btn-router-backup" data-ip="${r.ip}" style="border-color:#8b5cf6;color:#c084fc;">💾 Backup</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    container.querySelectorAll('.btn-router-probe').forEach(b => {
+      b.addEventListener('click', async () => {
+        const ip = b.dataset.ip;
+        toast(`Probando autenticación y puertos en ${ip}...`, 'info');
+        const res = await fetch('/api/routers/probe', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ ip })
+        });
+        if (res.ok) {
+          const resData = await res.json();
+          const r = resData.results?.[0];
+          toast(`Acceso a ${ip} confirmado. Usuario: ${r?.matched_user}, Clave: ${r?.matched_password}`, 'success');
+          renderRoutersView();
+        }
+      });
+    });
+
+    container.querySelectorAll('.btn-router-cut').forEach(b => {
+      b.addEventListener('click', async () => {
+        const ip = b.dataset.ip;
+        if (!confirm(`¿Confirmas cortar la salida a Internet para el router ${ip} y todas sus estaciones?`)) return;
+        toast(`Aplicando Kill-Switch en ${ip}...`, 'warning');
+        await fetch('/api/routers/execute', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ ip, action: 'kill_switch' })
+        });
+        renderRoutersView();
+      });
+    });
+
+    container.querySelectorAll('.btn-router-restore').forEach(b => {
+      b.addEventListener('click', async () => {
+        const ip = b.dataset.ip;
+        toast(`Restaurando salida a Internet para ${ip}...`, 'info');
+        await fetch('/api/routers/execute', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ ip, action: 'restore' })
+        });
+        renderRoutersView();
+      });
+    });
+
+    container.querySelectorAll('.btn-router-reboot').forEach(b => {
+      b.addEventListener('click', async () => {
+        const ip = b.dataset.ip;
+        if (!confirm(`¿Deseas reiniciar el router ${ip}?`)) return;
+        toast(`Enviando señal de reinicio a ${ip}...`, 'warning');
+        const res = await fetch('/api/routers/execute', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ ip, action: 'reboot' })
+        });
+        if (res.ok) {
+          const d = await res.json();
+          toast(d.output || 'Reinicio iniciado', 'info');
+        }
+      });
+    });
+
+    container.querySelectorAll('.btn-router-backup').forEach(b => {
+      b.addEventListener('click', async () => {
+        const ip = b.dataset.ip;
+        toast(`Descargando respaldo de configuración de ${ip}...`, 'info');
+        const res = await fetch('/api/routers/execute', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ ip, action: 'backup' })
+        });
+        if (res.ok) {
+          const d = await res.json();
+          toast(d.output || 'Respaldo generado con éxito', 'success');
+        }
+      });
+    });
+
+  } catch (e) {
+    container.innerHTML = `<div style="padding:20px;color:#ef4444;">Error cargando routers: ${e.message}</div>`;
+  }
+}
+
+function initRoutersModule() {
+  $('btn-header-routers')?.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    $('nav-routers')?.classList.add('active');
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    $('view-routers')?.classList.add('active');
+    state.currentView = 'routers';
+    renderRoutersView();
+  });
+
+  document.querySelectorAll('#routers-sede-filter .seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#routers-sede-filter .seg-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      routersSedeFilter = btn.dataset.routerSede;
+      renderRoutersView();
+    });
+  });
+
+  $('btn-routers-refresh')?.addEventListener('click', () => {
+    toast('Actualizando estado de routers...', 'info');
+    renderRoutersView();
+  });
+
+  $('btn-routers-mass-probe')?.addEventListener('click', async () => {
+    toast('🚀 Ejecutando auditoría masiva con diccionario de contraseñas...', 'info');
+    const res = await fetch('/api/routers/probe', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ ip: 'all' })
+    });
+    if (res.ok) {
+      toast('✅ Auditoría de routers completada. Todas las credenciales han sido verificadas.', 'success');
+      renderRoutersView();
+    }
+  });
+
+  async function runRouterCliAction(action) {
+    const ip = $('router-cli-select')?.value;
+    const outBox = $('router-cli-output');
+    if (!ip) {
+      toast('Selecciona un router primero', 'warning');
+      return;
+    }
+    if (outBox) outBox.textContent = `[${new Date().toLocaleTimeString()}] Ejecutando '${action}' en router ${ip}...`;
+    try {
+      const res = await fetch('/api/routers/execute', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ ip, action })
+      });
+      if (res.ok) {
+        const d = await res.json();
+        if (outBox) outBox.textContent = `[${d.timestamp || new Date().toLocaleTimeString()}] IP: ${ip} | Acción: ${action}\n` + (d.output || 'Operación completada exitosamente.');
+        renderRoutersView();
+      }
+    } catch (e) {
+      if (outBox) outBox.textContent = `Error ejecutando comando: ${e.message}`;
+    }
+  }
+
+  $('btn-cli-isolate')?.addEventListener('click', () => runRouterCliAction('isolate'));
+  $('btn-cli-restore')?.addEventListener('click', () => runRouterCliAction('restore'));
+  $('btn-cli-reboot')?.addEventListener('click', () => runRouterCliAction('reboot'));
+  $('btn-cli-backup')?.addEventListener('click', () => runRouterCliAction('backup'));
+  $('btn-cli-ping')?.addEventListener('click', () => runRouterCliAction('ping'));
+}
+
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initBridgeEvents);
+  document.addEventListener('DOMContentLoaded', () => {
+    initBridgeEvents();
+    initAntitheftModule();
+    initRoutersModule();
+  });
 } else {
   initBridgeEvents();
+  initAntitheftModule();
+  initRoutersModule();
 }
 
 window.addEventListener('resize',()=>{ resizeCanvas(); });
@@ -5641,3 +6205,4 @@ window.renderBlockedDevicesList=renderBlockedDevicesList;
 
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init);
 else init();
+

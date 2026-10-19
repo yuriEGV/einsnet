@@ -60,6 +60,8 @@
     <div class="sede-pill" id="sede-pill" title="Clic para alternar sede o ver Enlace Inter-Sedes (Lynch ↔ Levarte)" style="display:inline-flex;align-items:center;gap:6px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);border-radius:12px;padding:4px 10px;font-size:11.5px;color:#34d399;font-weight:700;cursor:pointer;"><span style="color:#10b981;">📍</span> <strong>Sede Levarte</strong> <span style="font-size:10px;color:#94a3b8;">· 🟢 Enlazado Lynch</span></div>
     <button class="btn-sm" id="btn-subyugadas-header" title="Ver Mapeo y Redes Subyugadas al Router Principal FortiGate (192.168.1.99)" style="border-color:#38bdf8;color:#38bdf8;display:inline-flex;align-items:center;gap:5px;font-weight:700;">🌐 Redes Subyugadas</button>
     <div class="scan-status" id="scan-status"><span class="pulse-green-dot"></span> Red activa</div>
+    <button class="btn-sm" id="btn-header-antitheft" title="Escudo Antirrobo: Clic para Armar / Desarmar vigilancia de activos críticos" style="border-color:#ef4444;color:#f87171;display:inline-flex;align-items:center;gap:5px;font-weight:700;"><span id="header-antitheft-icon">🛡️</span> <span id="header-antitheft-text">Antirrobo: OFF</span></button>
+    <button class="btn-sm" id="btn-header-routers" title="Bóveda de Credenciales y Control de Routers" style="border-color:#0284c7;color:#38bdf8;display:inline-flex;align-items:center;gap:5px;font-weight:700;">🖧 Routers</button>
     <button class="btn-emergency pulse-emergency" id="btn-emergency-broadcast" title="Emitir mensaje de emergencia y evacuación a toda la red">🚨 Evacuación</button>
     <a href="/alerta" target="_blank" class="btn-app-install" id="btn-intercom-portal" title="Abrir Intercomunicador y Buzón de Mensajes" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px;">💬 Chat LAN <span id="inbox-count" style="background:#10b981;color:#050b18;font-size:10px;padding:1px 5px;border-radius:10px;font-weight:700;">1</span></a>
     <button class="btn-app-install" id="btn-app-install" title="Acceso directo de Escritorio e Instalación">&#x1F5B5; App</button>
@@ -102,6 +104,10 @@
         <span class="nav-badge" style="background:#10b981;color:#050b18;font-weight:700;">DNS</span>
       </button>
       <div class="nav-section-label">SEGURIDAD</div>
+      <button class="nav-item" data-view="antitheft" id="nav-antitheft">
+        <span class="nav-icon">🚨</span> Escudo Antirrobo
+        <span class="nav-badge" style="background:#ef4444;color:#fff;font-weight:700;" id="antitheft-badge">OFF</span>
+      </button>
       <button class="nav-item" data-view="vulns">
         <span class="nav-icon">&#x26A1;</span> Vulnerabilidades
         <span class="nav-badge nav-badge-vuln" id="vuln-badge">CVE</span>
@@ -111,6 +117,10 @@
         <span class="nav-badge" id="nav-badge">0</span>
       </button>
       <div class="nav-section-label">HERRAMIENTAS</div>
+      <button class="nav-item" data-view="routers" id="nav-routers">
+        <span class="nav-icon">🖧</span> Control de Routers
+        <span class="nav-badge" style="background:#0284c7;color:#fff;font-weight:700;">VAULT</span>
+      </button>
       <button class="nav-item" data-view="tools">
         <span class="nav-icon">&#x2692;</span> Herramientas
       </button>
@@ -1448,6 +1458,198 @@
                 <p>Usa la IP WAN <code>185.234.218.4</code> con reenvío de puerto hacia el servidor central.</p>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ VIEW: ESCUDO ANTIRROBO DE ACTIVOS DE RED (ANTI-THEFT GUARD) ══ -->
+    <div class="view" id="view-antitheft">
+      <div class="view-header" style="flex-wrap:wrap;gap:12px;">
+        <div>
+          <h2>🚨 Escudo Antirrobo de Red (Anti-Theft Shield)</h2>
+          <span style="font-size:12px;color:var(--text-3);display:block;margin-top:2px;">
+            Detección de desconexión física no autorizada en Relojes Controles Biométricos, Servidores TI, Impresoras y Estaciones Críticas
+          </span>
+        </div>
+        <div class="view-controls">
+          <button class="btn-sm" id="btn-antitheft-toggle-view" style="background:#ef4444;color:#fff;font-weight:700;border-color:#ef4444;">🛡️ Armar Sistema</button>
+          <button class="btn-sm" id="btn-antitheft-test-alarm" style="border-color:#f59e0b;color:#f59e0b;">🚨 Simulacro en Vivo</button>
+          <button class="btn-sm" id="btn-antitheft-silence" style="border-color:#64748b;color:#94a3b8;">🔇 Silenciar Sirena</button>
+          <button class="btn-sm" id="btn-antitheft-refresh" style="border-color:var(--cyan);color:var(--cyan);">🔄 Actualizar</button>
+        </div>
+      </div>
+
+      <!-- Banner de Alarma Activa -->
+      <div class="antitheft-banner" id="antitheft-active-banner" style="display:none;margin-top:8px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span style="font-size:28px;">🚨</span>
+          <div>
+            <strong style="font-size:15px;color:#fff;letter-spacing:0.5px;">¡ALERTA DE ROBO EN CURSO DETECTADA!</strong>
+            <span id="antitheft-banner-msg" style="display:block;font-size:12px;color:#fca5a5;margin-top:2px;">
+              Desconexión imprevista de activo protegido en el recinto.
+            </span>
+          </div>
+        </div>
+        <button class="btn-sm" id="btn-antitheft-dismiss-banner" style="background:#ef4444;color:#fff;border-color:#fff;font-weight:700;">Desactivar Alarma</button>
+      </div>
+
+      <!-- Tarjetas de Métricas Antirrobo -->
+      <div class="antitheft-card-grid" style="margin-top:8px;">
+        <div class="antitheft-stat-card safe" id="card-antitheft-status">
+          <span style="font-size:11px;color:#94a3b8;font-weight:600;">ESTADO DEL ESCUDO</span>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+            <span style="font-size:22px;" id="stat-antitheft-icon">🔓</span>
+            <strong style="font-size:18px;color:#34d399;" id="stat-antitheft-armed">DESARMADO</strong>
+          </div>
+          <small style="color:#64748b;" id="stat-antitheft-sub">Listo para vigilancia nocturna o 24/7</small>
+        </div>
+
+        <div class="antitheft-stat-card">
+          <span style="font-size:11px;color:#94a3b8;font-weight:600;">ACTIVOS PROTEGIDOS</span>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+            <span style="font-size:22px;">⏰</span>
+            <strong style="font-size:18px;color:#00f5ff;" id="stat-antitheft-count">11 Equipos</strong>
+          </div>
+          <small style="color:#64748b;">Relojes Biométricos, Servidores e Impresoras</small>
+        </div>
+
+        <div class="antitheft-stat-card">
+          <span style="font-size:11px;color:#94a3b8;font-weight:600;">TELEMETRÍA EN LÍNEA</span>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+            <span style="font-size:22px;">📶</span>
+            <strong style="font-size:18px;color:#10b981;" id="stat-antitheft-alive">100% Online</strong>
+          </div>
+          <small style="color:#64748b;">Ping continuo cada 4 segundos</small>
+        </div>
+
+        <div class="antitheft-stat-card">
+          <span style="font-size:11px;color:#94a3b8;font-weight:600;">INCIDENTES HISTÓRICOS</span>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+            <span style="font-size:22px;">📋</span>
+            <strong style="font-size:18px;color:#f59e0b;" id="stat-antitheft-incidents">0 Hurtos</strong>
+          </div>
+          <small style="color:#64748b;">Registro auditado e inmutable</small>
+        </div>
+      </div>
+
+      <!-- Tabla de Activos Protegidos -->
+      <div class="card" style="margin-top:8px;">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span>🛡️</span>
+            <h3 style="font-size:14px;color:#f8fafc;">Bóveda de Activos Protegidos por Antirrobo (Sede Lynch y Levarte)</h3>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="antitheft-search" placeholder="Filtrar activo o IP..." class="search-input" style="max-width:220px;"/>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table" id="table-antitheft-assets">
+            <thead>
+              <tr>
+                <th>Activo / Dispositivo</th>
+                <th>IP / MAC</th>
+                <th>Sede</th>
+                <th>Recinto Arquitectónico</th>
+                <th>Importancia</th>
+                <th>Estado Físico</th>
+                <th>Vigilancia Antirrobo</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-antitheft-assets">
+              <!-- Renderizado dinámico desde app.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Registro de Incidentes -->
+      <div class="card" style="margin-top:8px;">
+        <div class="card-header">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span>📑</span>
+            <h3 style="font-size:14px;color:#f8fafc;">Bitácora de Eventos, Desconexiones y Auditoría de Seguridad</h3>
+          </div>
+        </div>
+        <div class="table-wrap" style="max-height:260px;overflow-y:auto;">
+          <table class="data-table" id="table-antitheft-log">
+            <thead>
+              <tr>
+                <th>Hora</th>
+                <th>Tipo de Evento</th>
+                <th>Equipo / IP</th>
+                <th>Sede y Recinto</th>
+                <th>Detalles de la Alarma</th>
+                <th>Nivel</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-antitheft-log">
+              <!-- Renderizado dinámico desde app.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ VIEW: CONTROL DE ROUTERS & GESTIÓN DE ACCESO (ROUTER VAULT) ══ -->
+    <div class="view" id="view-routers">
+      <div class="view-header" style="flex-wrap:wrap;gap:12px;">
+        <div>
+          <h2>🖧 Control y Bóveda de Routers & Gateways</h2>
+          <span style="font-size:12px;color:var(--text-3);display:block;margin-top:2px;">
+            Acceso administrativo, auditoría de credenciales, corte de internet (Kill-Switch) y comandos CLI en Lynch y Levarte
+          </span>
+        </div>
+        <div class="view-controls">
+          <div class="map-mode-segmented" id="routers-sede-filter">
+            <button class="seg-btn active" data-router-sede="all">🌐 Todos</button>
+            <button class="seg-btn" data-router-sede="lynch">🏫 Sede Lynch</button>
+            <button class="seg-btn" data-router-sede="levarte">📍 Sede Levarte</button>
+          </div>
+          <button class="btn-sm" id="btn-routers-mass-probe" style="background:#0284c7;color:#fff;border-color:#0284c7;font-weight:700;">🚀 Probar Diccionario</button>
+          <button class="btn-sm" id="btn-routers-refresh" style="border-color:var(--cyan);color:var(--cyan);">🔄 Actualizar</button>
+        </div>
+      </div>
+
+      <!-- Banner de Credenciales Conocidas y Bóveda Segura -->
+      <div class="plano-wan-banner" style="border-color:rgba(2,132,199,0.4);background:rgba(2,132,199,0.08);margin-top:8px;">
+        <div style="display:flex;align-items:flex-start;gap:12px;">
+          <span style="font-size:24px;">🔑</span>
+          <div style="flex:1;font-size:12px;line-height:1.5;">
+            <strong style="color:#38bdf8;">Bóveda de Credenciales Corporativas de Red:</strong><br>
+            Usuarios de Acceso: <code style="color:#a78bfa;">admin</code>, <code style="color:#a78bfa;">administrador</code>, <code style="color:#a78bfa;">administrator</code><br>
+            Contraseñas Auditadas: <code style="color:#34d399;">Maquina12345*</code>, <code style="color:#34d399;">Maquina669</code>, <code style="color:#34d399;">maquina137</code>, <code style="color:#34d399;">Maquina137</code>, <code style="color:#34d399;">maquina669</code>, <code style="color:#34d399;">0918273645</code>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tarjetas de Routers -->
+      <div class="router-vault-grid" id="routers-cards-container" style="margin-top:8px;">
+        <!-- Renderizado dinámico desde app.js -->
+      </div>
+
+      <!-- Consola Rápida CLI de Routers -->
+      <div class="card" style="margin-top:10px;">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span>💻</span>
+            <h3 style="font-size:14px;color:#f8fafc;">Consola de Manipulación de Routers & Comandos Administrativos</h3>
+          </div>
+          <span style="font-size:11px;color:#94a3b8;">CLI Emulado & Ejecución en Vivo</span>
+        </div>
+        <div style="padding:14px;">
+          <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+            <select id="router-cli-select" class="select-sm" style="min-width:240px;"></select>
+            <button class="btn-sm" id="btn-cli-isolate" style="border-color:#ef4444;color:#f87171;">⚡ Cortar Internet (Kill-Switch)</button>
+            <button class="btn-sm" id="btn-cli-restore" style="border-color:#10b981;color:#34d399;">🟢 Restaurar Internet</button>
+            <button class="btn-sm" id="btn-cli-reboot" style="border-color:#f59e0b;color:#fbbf24;">🔄 Reiniciar Router</button>
+            <button class="btn-sm" id="btn-cli-backup" style="border-color:#8b5cf6;color:#c084fc;">💾 Respaldo Config</button>
+            <button class="btn-sm" id="btn-cli-ping" style="border-color:var(--cyan);color:var(--cyan);">📡 Ping Diagnóstico</button>
+          </div>
+          <div id="router-cli-output" style="background:#050b18;border:1px solid #1e293b;border-radius:8px;padding:12px;font-family:var(--mono);font-size:11.5px;color:#38bdf8;min-height:120px;white-space:pre-wrap;max-height:220px;overflow-y:auto;">
+Selecciona un router y presiona una acción para ejecutar comandos administrativos en la red...
           </div>
         </div>
       </div>

@@ -3,6 +3,34 @@
   "isolated_routers": {},
   "audit_log": [
     {
+      "timestamp": "2026-10-19 16:45:22",
+      "action": "RESTORE_STATION",
+      "target": "Samsung-Galaxy-Lab (192.168.14.105)",
+      "reason": "Contención de infección masiva / Estación aislada",
+      "admin": "Administrador TI EinsNet"
+    },
+    {
+      "timestamp": "2026-10-16 12:50:38",
+      "action": "ISOLATE_STATION",
+      "target": "Samsung-Galaxy-Lab (192.168.14.105)",
+      "reason": "Infección masiva / Aislamiento preventivo",
+      "admin": "Administrador TI EinsNet"
+    },
+    {
+      "timestamp": "2026-10-16 12:50:32",
+      "action": "RESTORE_STATION",
+      "target": "Samsung-Galaxy-Lab (192.168.14.105)",
+      "reason": "Aislamiento levantado por administrador",
+      "admin": "Administrador TI EinsNet"
+    },
+    {
+      "timestamp": "2026-10-16 08:12:10",
+      "action": "ISOLATE_STATION",
+      "target": "Samsung-Galaxy-Lab (192.168.14.105)",
+      "reason": "Infección masiva / Aislamiento preventivo",
+      "admin": "Administrador TI EinsNet"
+    },
+    {
       "timestamp": "2026-10-14 16:34:54",
       "action": "RESTORE_STATION",
       "target": "192.168.80.70 (192.168.80.70)",
