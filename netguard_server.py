@@ -1220,7 +1220,8 @@ def probe_router_access(router_ip):
 # ═══════════════════════════════════════════════════════════════════════════
 ANTITHEFT_STATE = {
     "armed": False,
-    "mode": "total",
+    "mode": "stealth",
+    "silent_mode": True,
     "armed_at": None,
     "armed_by": "maritimo (Soporte TI EinsNet)",
     "alarm_active": False,
@@ -1228,15 +1229,11 @@ ANTITHEFT_STATE = {
     "protected_ips": [
         "192.168.3.17",  # Reloj Biométrico Lynch (Crítico · Octeto 3)
         "192.168.1.201", # Reloj Biométrico Levarte (Crítico)
-        "192.168.80.21", # Impresora Central Lynch
-        "192.168.1.162", # HP PageWide Multifuncional Levarte
-        "192.168.80.47", # Servidor ThinkPad Yuri (TI Lynch)
-        "192.168.1.230", # Servidor Taller Local Levarte
-        "192.168.14.30", # GPU Render Node Gastronomía
-        "192.168.17.57", # Servidor TOS Naviero Portuario
         "192.168.3.1",   # Router Portería Lynch
         "192.168.80.1",  # GW-Fortinet Lynch
-        "192.168.1.99"   # GW-Fortinet Levarte
+        "192.168.1.99",  # GW-Fortinet Levarte
+        "192.168.80.21", # Impresora Central Lynch
+        "192.168.1.162"  # HP PageWide Multifuncional Levarte
     ],
     "incidents": [
         {
@@ -1247,14 +1244,14 @@ ANTITHEFT_STATE = {
             "name": "Reloj-Biometrico-Lynch",
             "sede": "lynch",
             "area": "Portería / Control Acceso y Asistencia (Octeto 3)",
-            "details": "Activo biométrico de Portería Lynch añadido a la bóveda de vigilancia antirrobo.",
+            "details": "Activo biométrico de Portería Lynch en monitoreo sigiloso 100% silencioso.",
             "severity": "info"
         }
     ]
 }
 
-def trigger_theft_alarm(asset_ip, reason="Desconexión física no autorizada / Posible sustracción"):
-    """Dispara la alarma general de hurto / desconexión no autorizada"""
+def trigger_theft_alarm(asset_ip, reason="Desconexión física no autorizada / Sustracción"):
+    """Registra sigilosamente la desconexión no autorizada SIN emitir sirena ni alertas que avisen al intruso"""
     asset = LIVE_HOSTS_CACHE.get(asset_ip, {})
     name = asset.get("name", asset_ip)
     sede = asset.get("sede", "lynch")
@@ -1272,7 +1269,8 @@ def trigger_theft_alarm(asset_ip, reason="Desconexión física no autorizada / P
         "area": area,
         "reason": reason,
         "severity": "CRITICAL",
-        "action_required": "Verificar presencia física inmediatamente en el recinto"
+        "silent": True,
+        "action_required": "Verificar presencia física sigilosamente en el recinto (Sin alertar al sospechoso)"
     }
 
     ANTITHEFT_STATE["alarm_active"] = True
@@ -1281,15 +1279,8 @@ def trigger_theft_alarm(asset_ip, reason="Desconexión física no autorizada / P
     if len(ANTITHEFT_STATE["incidents"]) > 50:
         ANTITHEFT_STATE["incidents"] = ANTITHEFT_STATE["incidents"][:50]
 
-    alarm_msg = (
-        f"🚨 [¡ALERTA DE ROBO EN CURSO!]\n"
-        f"Se ha detectado la desconexión imprevista del equipo protegido:\n"
-        f"• Activo: {name} ({asset_ip})\n"
-        f"• Ubicación: {area} · Sede {sede.upper()}\n"
-        f"• Hora: {ts}\n"
-        f"¡Personal de seguridad e inspectoría debe acudir de inmediato al sector!"
-    )
-    threading.Thread(target=broadcast_emergency_all, args=(alarm_msg,), kwargs={"preset": "emergency"}, daemon=True).start()
+    # NOTA: Modo 100% Silencioso / Sigilo Activo
+    # NO se ejecuta broadcast_emergency_all ni ventanas emergentes en Windows para que el ladrón NO sepa que fue detectado.
     return alarm_obj
 
 def antitheft_monitor_loop():
@@ -1998,6 +1989,7 @@ class NetGuardRequestHandler(SimpleHTTPRequestHandler):
                 "success": True,
                 "armed": ANTITHEFT_STATE["armed"],
                 "mode": ANTITHEFT_STATE["mode"],
+                "silent_mode": ANTITHEFT_STATE.get("silent_mode", True),
                 "armed_at": ANTITHEFT_STATE["armed_at"],
                 "armed_by": ANTITHEFT_STATE["armed_by"],
                 "alarm_active": ANTITHEFT_STATE["alarm_active"],
@@ -3211,14 +3203,12 @@ class NetGuardRequestHandler(SimpleHTTPRequestHandler):
             if ANTITHEFT_STATE["armed"]:
                 ANTITHEFT_STATE["armed_at"] = ts
                 ANTITHEFT_STATE["alarm_active"] = False
-                action_text = "🛡️ SISTEMA ANTIRROBO ARMADO"
-                msg_body = "El sistema de protección antirrobo ha sido ACTIVADO para ambas sedes. La desconexión de cualquier reloj control, servidor o equipo protegido activará la sirena general."
-                preset = "info"
+                action_text = "🛡️ VIGILANCIA SILENCIOSA ACTIVADA (MODO SIGILO TI)"
+                msg_body = "Vigilancia oculta armada. Si se sustrae o desconecta un activo, se registrará silenciosamente sin emitir sirenas ni mensajes en red para no alertar al sospechoso."
             else:
                 ANTITHEFT_STATE["alarm_active"] = False
-                action_text = "🔓 SISTEMA ANTIRROBO DESARMADO"
-                msg_body = "El sistema antirrobo ha sido DESARMADO por el Administrador. Mantenimiento autorizado."
-                preset = "direct"
+                action_text = "🔓 VIGILANCIA SILENCIOSA DESARMADA"
+                msg_body = "Vigilancia en reposo. Mantenimiento autorizado."
 
             ANTITHEFT_STATE["incidents"].insert(0, {
                 "id": f"inc-{int(time.time())}",
@@ -3232,8 +3222,7 @@ class NetGuardRequestHandler(SimpleHTTPRequestHandler):
                 "severity": "high" if ANTITHEFT_STATE["armed"] else "info"
             })
 
-            threading.Thread(target=broadcast_emergency_all, args=(f"[{action_text}]\n{msg_body}",), kwargs={"preset": preset}, daemon=True).start()
-
+            # Silencioso: NO se emiten avisos que alerten a terceros en la red.
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()

@@ -5647,32 +5647,12 @@ function initBridgeEvents() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-//  MÓDULO: ESCUDO ANTIRROBO DE ACTIVOS DE RED (ANTI-THEFT SHIELD)
+//  MÓDULO: ESCUDO ANTIRROBO DE ACTIVOS DE RED (MODO SIGILOSO SILENCIOSO)
 // ═══════════════════════════════════════════════════════════════════
-let theftAudioCtx = null;
-
 function playTheftAlarmSound() {
-  try {
-    if (!theftAudioCtx) theftAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (theftAudioCtx.state === 'suspended') theftAudioCtx.resume();
-    const now = theftAudioCtx.currentTime;
-    const osc = theftAudioCtx.createOscillator();
-    const gain = theftAudioCtx.createGain();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(850, now);
-    osc.frequency.linearRampToValueAtTime(1400, now + 0.3);
-    osc.frequency.linearRampToValueAtTime(850, now + 0.6);
-    osc.frequency.linearRampToValueAtTime(1400, now + 0.9);
-    osc.frequency.linearRampToValueAtTime(850, now + 1.2);
-    gain.gain.setValueAtTime(0.25, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 1.3);
-    osc.connect(gain);
-    gain.connect(theftAudioCtx.destination);
-    osc.start(now);
-    osc.stop(now + 1.3);
-  } catch (e) {
-    console.warn('Audio no inicializado:', e);
-  }
+  // 🔕 MODO 100% SILENCIOSO / SIGILO PERMANENTE
+  // Sin sirena ni audio para no alertar a los sospechosos de que han sido detectados.
+  return;
 }
 
 let antitheftDataCache = null;
@@ -5701,37 +5681,33 @@ function updateAntitheftHeader(data) {
   const hIcon = $('header-antitheft-icon');
 
   if (badge) {
-    badge.textContent = isAlarm ? '🚨 ALARMA' : (isArmed ? 'ARMADO' : 'OFF');
-    badge.style.background = isAlarm ? '#ef4444' : (isArmed ? '#dc2626' : '#64748b');
-    badge.classList.toggle('pulse-emergency', isAlarm);
+    badge.textContent = isAlarm ? '🔕 INCIDENTE (SIGILO)' : (isArmed ? 'SIGILO: ON' : 'SIGILO: OFF');
+    badge.style.background = isAlarm ? '#dc2626' : (isArmed ? '#0284c7' : '#64748b');
+    badge.classList.remove('pulse-emergency');
   }
   if (hText) {
-    hText.textContent = isAlarm ? '¡ROBO EN CURSO!' : (isArmed ? 'Antirrobo: ARMADO' : 'Antirrobo: OFF');
+    hText.textContent = isAlarm ? 'Incidente Registrado (Silencioso)' : (isArmed ? 'Vigilancia Sigilosa: ON' : 'Vigilancia Sigilosa: OFF');
   }
   if (hIcon) {
-    hIcon.textContent = isAlarm ? '🚨' : (isArmed ? '🛡️' : '🔓');
+    hIcon.textContent = isAlarm ? '🔕' : (isArmed ? '🛡️' : '🔓');
   }
   if (hBtn) {
+    hBtn.classList.remove('pulse-emergency');
     if (isAlarm) {
-      hBtn.style.borderColor = '#ef4444';
-      hBtn.style.background = '#ef4444';
-      hBtn.style.color = '#ffffff';
-      hBtn.classList.add('pulse-emergency');
+      hBtn.style.borderColor = '#dc2626';
+      hBtn.style.background = 'rgba(220,38,38,0.2)';
+      hBtn.style.color = '#fca5a5';
     } else if (isArmed) {
-      hBtn.style.borderColor = '#ef4444';
-      hBtn.style.background = 'rgba(239,68,68,0.18)';
-      hBtn.style.color = '#f87171';
-      hBtn.classList.remove('pulse-emergency');
+      hBtn.style.borderColor = '#0ea5e9';
+      hBtn.style.background = 'rgba(14,165,233,0.18)';
+      hBtn.style.color = '#38bdf8';
     } else {
       hBtn.style.borderColor = '#475569';
       hBtn.style.background = 'transparent';
       hBtn.style.color = '#94a3b8';
-      hBtn.classList.remove('pulse-emergency');
     }
   }
-  if (isAlarm) {
-    playTheftAlarmSound();
-  }
+  // Muted: Nunca reproducir sonido
 }
 
 async function renderAntitheftView() {
@@ -5743,9 +5719,9 @@ async function renderAntitheftView() {
 
   const tBtn = $('btn-antitheft-toggle-view');
   if (tBtn) {
-    tBtn.textContent = isArmed ? '🔓 Desarmar Sistema' : '🛡️ Armar Sistema';
-    tBtn.style.background = isArmed ? '#334155' : '#ef4444';
-    tBtn.style.borderColor = isArmed ? '#475569' : '#ef4444';
+    tBtn.textContent = isArmed ? '🔓 Desactivar Vigilancia' : '🛡️ Activar Vigilancia Silenciosa';
+    tBtn.style.background = isArmed ? '#334155' : '#0284c7';
+    tBtn.style.borderColor = isArmed ? '#475569' : '#0284c7';
   }
 
   const banner = $('antitheft-active-banner');
@@ -5754,7 +5730,7 @@ async function renderAntitheftView() {
     if (isAlarm && data.last_alarm) {
       banner.style.display = 'flex';
       if (bannerMsg) {
-        bannerMsg.textContent = `¡Desconexión imprevista detectada! Equipo: ${data.last_alarm.name} (${data.last_alarm.ip}) en ${data.last_alarm.area} · Sede ${data.last_alarm.sede?.toUpperCase()}`;
+        bannerMsg.textContent = `🔕 [REGISTRO SILENCIOSO DE SUSTRACCIÓN] Activo desconectado: ${data.last_alarm.name} (${data.last_alarm.ip}) en ${data.last_alarm.area} · Sede ${data.last_alarm.sede?.toUpperCase()} (Sin sirena para no alertar al sospechoso)`;
       }
     } else {
       banner.style.display = 'none';
