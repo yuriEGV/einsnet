@@ -6272,7 +6272,7 @@ function initRoutersModule() {
 // ═══════════════════════════════════════════════════════════════════
 //  MÓDULO: DASHBOARD DE CÁMARAS CCTV IP & VIDEOVIGILANCIA
 // ═══════════════════════════════════════════════════════════════════
-let camerasSedeFilter = 'all';
+let camerasSedeFilter = 'lynch';
 let camerasLayoutMode = 'grid';
 let camerasDataCache = [];
 let focusedCameraIp = null;
@@ -6289,6 +6289,27 @@ async function renderCamerasDashboard() {
     }
     const data = await res.json();
     camerasDataCache = data.cameras || [];
+    const nvr = data.nvr_config || {};
+
+    // Sincronizar barra NVR
+    const nvrInput = $('nvr-ip-input');
+    if (nvrInput && !nvrInput.matches(':focus')) {
+      nvrInput.value = nvr.ip || '192.168.1.64';
+    }
+    const nvrBadge = $('nvr-status-badge');
+    if (nvrBadge) {
+      if (nvr.status === 'online') {
+        nvrBadge.style.background = 'rgba(16,185,129,0.2)';
+        nvrBadge.style.color = '#34d399';
+        nvrBadge.style.borderColor = 'rgba(16,185,129,0.4)';
+        nvrBadge.innerHTML = '🟢 NVR En Línea';
+      } else {
+        nvrBadge.style.background = 'rgba(239,68,68,0.2)';
+        nvrBadge.style.color = '#f87171';
+        nvrBadge.style.borderColor = 'rgba(239,68,68,0.4)';
+        nvrBadge.innerHTML = '⚠️ NVR Sin Enlace (Ajustar IP en pantalla)';
+      }
+    }
 
     // Actualizar KPIs
     const onlineCount = camerasDataCache.filter(c => c.status === 'online').length;
@@ -6307,11 +6328,11 @@ async function renderCamerasDashboard() {
     }
 
     const displayCams = (camerasLayoutMode === 'focus' && focusedCameraIp)
-      ? filtered.filter(c => c.ip === focusedCameraIp)
+      ? filtered.filter(c => (c.id || c.ip) === focusedCameraIp)
       : filtered;
 
     if (displayCams.length === 0 && filtered.length > 0) {
-      focusedCameraIp = filtered[0].ip;
+      focusedCameraIp = filtered[0].id || filtered[0].ip;
     }
 
     const finalCams = (displayCams.length > 0 ? displayCams : filtered);
@@ -6319,19 +6340,21 @@ async function renderCamerasDashboard() {
     container.innerHTML = finalCams.map(c => {
       const isLynch = c.sede === 'lynch';
       const sedeClass = isLynch ? 'sede-lynch' : 'sede-levarte';
-      const sedeLabel = isLynch ? '🏫 Lynch' : '📍 Levarte';
+      const sedeLabel = isLynch ? '🏫 Lynch (NVR Ch ' + (c.channel || 1) + ')' : '📍 Levarte';
       const ptz = c.ptz || { pan: 0, tilt: 0, zoom: 1.0 };
       const curMode = c.mode || 'day';
       const isRec = Boolean(c.recording);
+      const camTargetKey = c.id || c.ip;
+      const imgDomId = `cctv-img-${camTargetKey.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
 
       return `
-        <div class="cctv-card" data-ip="${c.ip}">
+        <div class="cctv-card" data-ip="${c.ip}" data-id="${camTargetKey}">
           <div class="cctv-card-header">
             <div class="cctv-card-title">
               <span style="font-size:16px;">📹</span>
               <div>
                 <h3>${escapeHtml(c.name)}</h3>
-                <span style="font-size:10.5px;color:#94a3b8;font-family:var(--mono);">${c.ip} · ${escapeHtml(c.model)}</span>
+                <span style="font-size:10.5px;color:#94a3b8;font-family:var(--mono);">IP: ${c.ip} · ${escapeHtml(c.model)}</span>
               </div>
             </div>
             <div style="display:flex;align-items:center;gap:6px;">
@@ -6345,10 +6368,11 @@ async function renderCamerasDashboard() {
 
           <!-- Live CCTV Viewport Stream -->
           <div class="cctv-viewport-box" title="Clic para alternar enfoque de cámara">
-            <img src="/api/cameras/snapshot?ip=${c.ip}&t=${Date.now()}" 
+            <img src="/api/cameras/snapshot?ip=${camTargetKey}&t=${Date.now()}" 
                  alt="${escapeHtml(c.name)}" 
                  class="cctv-stream-img" 
-                 id="cctv-img-${c.ip.replace(/\./g, '_')}" />
+                 id="${imgDomId}"
+                 onerror="setTimeout(()=>{ this.src = '/api/cameras/snapshot?ip=${camTargetKey}&t=' + Date.now(); }, 1500);" />
             <div class="cctv-osd-badge">
               ${c.resolution} · ${c.fps} FPS · ${c.bitrate}
             </div>
@@ -6359,9 +6383,9 @@ async function renderCamerasDashboard() {
             <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
               <div class="cctv-mode-selector">
                 <span style="font-size:11px;color:#94a3b8;font-weight:600;">Modo:</span>
-                <button class="cctv-mode-btn ${curMode === 'day' ? 'active' : ''}" data-ip="${c.ip}" data-mode="day">☀️ Día</button>
-                <button class="cctv-mode-btn ${curMode === 'night_ir' ? 'active' : ''}" data-ip="${c.ip}" data-mode="night_ir">🌙 IR Noche</button>
-                <button class="cctv-mode-btn ${curMode === 'thermal' ? 'active' : ''}" data-ip="${c.ip}" data-mode="thermal">🔥 Térmica</button>
+                <button class="cctv-mode-btn ${curMode === 'day' ? 'active' : ''}" data-target="${camTargetKey}" data-mode="day">☀️ Día</button>
+                <button class="cctv-mode-btn ${curMode === 'night_ir' ? 'active' : ''}" data-target="${camTargetKey}" data-mode="night_ir">🌙 IR Noche</button>
+                <button class="cctv-mode-btn ${curMode === 'thermal' ? 'active' : ''}" data-target="${camTargetKey}" data-mode="thermal">🔥 Térmica</button>
               </div>
 
               <!-- Mini Joystick PTZ -->
@@ -6369,18 +6393,18 @@ async function renderCamerasDashboard() {
                 <span style="font-size:11px;color:#94a3b8;font-weight:600;">PTZ:</span>
                 <div class="ptz-mini-dpad">
                   <div></div>
-                  <button class="ptz-btn" data-ip="${c.ip}" data-ptz="up" title="Mover Arriba (Tilt +)">▲</button>
+                  <button class="ptz-btn" data-target="${camTargetKey}" data-ptz="up" title="Mover Arriba (Tilt +)">▲</button>
                   <div></div>
-                  <button class="ptz-btn" data-ip="${c.ip}" data-ptz="left" title="Mover Izquierda (Pan -)">◀</button>
-                  <button class="ptz-btn home-btn" data-ip="${c.ip}" data-ptz="home" title="Posición Inicial (Home)">●</button>
-                  <button class="ptz-btn" data-ip="${c.ip}" data-ptz="right" title="Mover Derecha (Pan +)">▶</button>
+                  <button class="ptz-btn" data-target="${camTargetKey}" data-ptz="left" title="Mover Izquierda (Pan -)">◀</button>
+                  <button class="ptz-btn home-btn" data-target="${camTargetKey}" data-ptz="home" title="Posición Inicial (Home)">●</button>
+                  <button class="ptz-btn" data-target="${camTargetKey}" data-ptz="right" title="Mover Derecha (Pan +)">▶</button>
                   <div></div>
-                  <button class="ptz-btn" data-ip="${c.ip}" data-ptz="down" title="Mover Abajo (Tilt -)">▼</button>
+                  <button class="ptz-btn" data-target="${camTargetKey}" data-ptz="down" title="Mover Abajo (Tilt -)">▼</button>
                   <div></div>
                 </div>
                 <div style="display:flex;flex-direction:column;gap:3px;">
-                  <button class="ptz-btn" data-ip="${c.ip}" data-ptz="zoom_in" title="Acercar (Zoom In)" style="width:28px;height:24px;font-size:11px;">➕</button>
-                  <button class="ptz-btn" data-ip="${c.ip}" data-ptz="zoom_out" title="Alejar (Zoom Out)" style="width:28px;height:24px;font-size:11px;">➖</button>
+                  <button class="ptz-btn" data-target="${camTargetKey}" data-ptz="zoom_in" title="Acercar (Zoom In)" style="width:28px;height:24px;font-size:11px;">➕</button>
+                  <button class="ptz-btn" data-target="${camTargetKey}" data-ptz="zoom_out" title="Alejar (Zoom Out)" style="width:28px;height:24px;font-size:11px;">➖</button>
                 </div>
               </div>
             </div>
@@ -6391,10 +6415,10 @@ async function renderCamerasDashboard() {
                 <span>Ángulo: Pan ${ptz.pan}° · Tilt ${ptz.tilt}° · Zoom ${ptz.zoom}x</span>
               </div>
               <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                <button class="btn-sm btn-cctv-snap" data-ip="${c.ip}" style="border-color:#38bdf8;color:#38bdf8;padding:2px 8px;" title="Descargar captura pericial de imagen">📸 Snapshot</button>
-                <button class="btn-sm btn-cctv-rec" data-ip="${c.ip}" style="border-color:#ef4444;color:#f87171;padding:2px 8px;" title="Alternar grabación en NVR">${isRec ? '⏹ Pausar' : '🔴 Grabar'}</button>
-                <button class="btn-sm btn-cctv-reboot" data-ip="${c.ip}" style="border-color:#f59e0b;color:#fbbf24;padding:2px 8px;" title="Reinicio remoto ONVIF">🔄 Reboot</button>
-                <a href="${c.web_admin}" target="_blank" class="btn-sm" style="border-color:var(--cyan);color:var(--cyan);text-decoration:none;padding:2px 8px;" title="Abrir Web Admin de la cámara">🌐 Web</a>
+                <button class="btn-sm btn-cctv-snap" data-target="${camTargetKey}" style="border-color:#38bdf8;color:#38bdf8;padding:2px 8px;" title="Descargar captura pericial de imagen">📸 Snapshot</button>
+                <button class="btn-sm btn-cctv-rec" data-target="${camTargetKey}" style="border-color:#ef4444;color:#f87171;padding:2px 8px;" title="Alternar grabación en NVR">${isRec ? '⏹ Pausar' : '🔴 Grabar'}</button>
+                <button class="btn-sm btn-cctv-rtsp" data-rtsp="${c.rtsp_stream}" style="border-color:#a78bfa;color:#c084fc;padding:2px 8px;" title="Copiar enlace RTSP para VLC">▶ Copiar RTSP</button>
+                <a href="http://${c.ip}" target="_blank" class="btn-sm" style="border-color:var(--cyan);color:var(--cyan);text-decoration:none;padding:2px 8px;" title="Abrir Web Admin">🌐 Web</a>
               </div>
             </div>
           </div>
@@ -6406,20 +6430,21 @@ async function renderCamerasDashboard() {
     container.querySelectorAll('.ptz-btn').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
-        const ip = btn.dataset.ip;
+        const target = btn.dataset.target;
         const ptzAction = btn.dataset.ptz;
-        if (!ip || !ptzAction) return;
+        if (!target || !ptzAction) return;
 
         try {
           const res = await fetch('/api/cameras/ptz', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ip, action: ptzAction, step: 10 })
+            body: JSON.stringify({ ip: target, action: ptzAction, step: 10 })
           });
           if (res.ok) {
-            const imgEl = $(`cctv-img-${ip.replace(/\./g, '_')}`);
-            if (imgEl) imgEl.src = `/api/cameras/snapshot?ip=${ip}&t=${Date.now()}`;
-            toast(`PTZ ${ptzAction.toUpperCase()} aplicado en ${ip}`, 'info');
+            const imgDomId = `cctv-img-${target.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+            const imgEl = $(imgDomId);
+            if (imgEl) imgEl.src = `/api/cameras/snapshot?ip=${target}&t=${Date.now()}`;
+            toast(`PTZ ${ptzAction.toUpperCase()} aplicado en ${target}`, 'info');
           }
         } catch (err) {
           console.error(err);
@@ -6431,18 +6456,18 @@ async function renderCamerasDashboard() {
     container.querySelectorAll('.cctv-mode-btn').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
-        const ip = btn.dataset.ip;
+        const target = btn.dataset.target;
         const mode = btn.dataset.mode;
-        if (!ip || !mode) return;
+        if (!target || !mode) return;
 
         try {
           const res = await fetch('/api/cameras/mode', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ip, mode })
+            body: JSON.stringify({ ip: target, mode })
           });
           if (res.ok) {
-            toast(`Cámara ${ip}: Modo ${mode.toUpperCase()} activado`, 'success');
+            toast(`Cámara ${target}: Modo ${mode.toUpperCase()} activado`, 'success');
             renderCamerasDashboard();
           }
         } catch (err) {
@@ -6456,8 +6481,8 @@ async function renderCamerasDashboard() {
       box.addEventListener('click', (e) => {
         const card = box.closest('.cctv-card');
         if (!card) return;
-        const ip = card.dataset.ip;
-        focusedCameraIp = ip;
+        const target = card.dataset.id || card.dataset.ip;
+        focusedCameraIp = target;
         camerasLayoutMode = (camerasLayoutMode === 'focus' ? 'grid' : 'focus');
         document.querySelectorAll('#cameras-layout-filter .seg-btn').forEach(b => {
           b.classList.toggle('active', b.dataset.camLayout === camerasLayoutMode);
@@ -6466,24 +6491,24 @@ async function renderCamerasDashboard() {
       });
     });
 
-    // Acciones rápidas (Snapshot, Rec, Reboot)
+    // Acciones rápidas (Snapshot, Rec, Copiar RTSP)
     container.querySelectorAll('.btn-cctv-snap').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const ip = btn.dataset.ip;
-        window.open(`/api/cameras/snapshot?ip=${ip}&t=${Date.now()}`, '_blank');
-        toast(`Instantánea de evidencia capturada para ${ip}`, 'success');
+        const target = btn.dataset.target;
+        window.open(`/api/cameras/snapshot?ip=${target}&t=${Date.now()}`, '_blank');
+        toast(`Instantánea de evidencia capturada para ${target}`, 'success');
       });
     });
 
     container.querySelectorAll('.btn-cctv-rec').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
-        const ip = btn.dataset.ip;
+        const target = btn.dataset.target;
         const res = await fetch('/api/cameras/action', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ip, action: 'record_toggle' })
+          body: JSON.stringify({ ip: target, action: 'record_toggle' })
         });
         if (res.ok) {
           const d = await res.json();
@@ -6493,19 +6518,16 @@ async function renderCamerasDashboard() {
       });
     });
 
-    container.querySelectorAll('.btn-cctv-reboot').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
+    container.querySelectorAll('.btn-cctv-rtsp').forEach(btn => {
+      btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const ip = btn.dataset.ip;
-        if (!confirm(`¿Confirmas reiniciar el procesador de video de la cámara ${ip}?`)) return;
-        toast(`Reiniciando cámara ${ip} vía comando ONVIF...`, 'warning');
-        const res = await fetch('/api/cameras/action', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ip, action: 'reboot' })
-        });
-        if (res.ok) {
-          toast(`Comando de reinicio ejecutado con éxito en ${ip}`, 'success');
+        const rtsp = btn.dataset.rtsp;
+        if (rtsp) {
+          navigator.clipboard.writeText(rtsp).then(() => {
+            toast(`Enlace RTSP copiado al portapapeles: ${rtsp}`, 'success');
+          }).catch(() => {
+            prompt('Enlace RTSP de la cámara (abre con VLC):', rtsp);
+          });
         }
       });
     });
@@ -6526,7 +6548,7 @@ function initCamerasModule() {
     renderCamerasDashboard();
   });
 
-  // Filtro de Sede (Todas / Lynch / Levarte)
+  // Filtro de Sede (Lynch 4 Cams / Levarte 4 Cams / Todas 8 Cams)
   document.querySelectorAll('#cameras-sede-filter .seg-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('#cameras-sede-filter .seg-btn').forEach(b => b.classList.remove('active'));
@@ -6546,6 +6568,27 @@ function initCamerasModule() {
     });
   });
 
+  // Botón Probar / Guardar Enlace NVR
+  $('btn-save-nvr-ip')?.addEventListener('click', async () => {
+    const ipVal = $('nvr-ip-input')?.value.trim();
+    if (!ipVal) return;
+    toast(`Probando enlace de red con NVR Hikvision en ${ipVal}...`, 'info');
+    try {
+      const res = await fetch('/api/cameras/nvr-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ip: ipVal })
+      });
+      if (res.ok) {
+        const d = await res.json();
+        toast(d.message, d.is_alive ? 'success' : 'warning');
+        renderCamerasDashboard();
+      }
+    } catch (e) {
+      toast('Error al comunicar con NVR: ' + e.message, 'error');
+    }
+  });
+
   // Botón Actualizar
   $('btn-cameras-refresh')?.addEventListener('click', () => {
     toast('Actualizando señales de video CCTV...', 'info');
@@ -6556,7 +6599,8 @@ function initCamerasModule() {
   $('btn-cameras-snap-all')?.addEventListener('click', () => {
     toast('📸 Captura múltiple ejecutada: instantáneas periciales archivadas.', 'success');
     camerasDataCache.forEach(c => {
-      window.open(`/api/cameras/snapshot?ip=${c.ip}&t=${Date.now()}`, '_blank');
+      const target = c.id || c.ip;
+      window.open(`/api/cameras/snapshot?ip=${target}&t=${Date.now()}`, '_blank');
     });
   });
 
@@ -6564,9 +6608,11 @@ function initCamerasModule() {
   setInterval(() => {
     if (state.currentView === 'cameras') {
       camerasDataCache.forEach(c => {
-        const imgEl = $(`cctv-img-${c.ip.replace(/\./g, '_')}`);
+        const target = c.id || c.ip;
+        const imgDomId = `cctv-img-${target.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+        const imgEl = $(imgDomId);
         if (imgEl) {
-          imgEl.src = `/api/cameras/snapshot?ip=${c.ip}&t=${Date.now()}`;
+          imgEl.src = `/api/cameras/snapshot?ip=${target}&t=${Date.now()}`;
         }
       });
     }
