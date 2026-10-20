@@ -5,9 +5,15 @@ import ssl
 import json
 import concurrent.futures
 
-# Credentials provided by user
-USERS = ['admin', 'administrador', 'administrator']
-PASSWORDS = ['Maquina12345*', 'Maquina669', 'maquina137', 'Maquina137', 'maquina669', '0918273645']
+# Load credentials privately
+try:
+    with open('local_vault.json', 'r', encoding='utf-8') as f:
+        _v = json.load(f)
+        USERS = _v.get('users', ['admin'])
+        PASSWORDS = _v.get('passwords', [])
+except Exception:
+    USERS = ['admin']
+    PASSWORDS = []
 
 ctx = ssl.create_default_context()
 ctx.check_hostname = False

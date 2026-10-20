@@ -6,6 +6,20 @@
    ═══════════════════════════════════════════════════════════ */
 'use strict';
 
+// ── SANITIZACIÓN HTML SEGURA ──
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+if (typeof window !== 'undefined') {
+  window.escapeHtml = escapeHtml;
+}
+
 // ═══════════════════════════════════════════════════════
 //  DEVICE DATA (from your real scan 192.168.80.x)
 // ═══════════════════════════════════════════════════════
@@ -6076,7 +6090,7 @@ async function renderRoutersView() {
                 : '<span class="badge badge-success" style="font-size:10px;"><span class="pulse-green-dot"></span> OPERATIVO</span>'
               }
               <div style="margin-top:4px;">
-                <span class="auth-badge verified">🔑 ${escapeHtml(r.matched_user)} : ${escapeHtml(r.matched_password)}</span>
+                <span class="auth-badge verified" title="Acceso administrativo corporativo resguardado en backend">🔑 Acceso Autorizado</span>
               </div>
             </div>
           </div>
@@ -6114,9 +6128,7 @@ async function renderRoutersView() {
           body: JSON.stringify({ ip })
         });
         if (res.ok) {
-          const resData = await res.json();
-          const r = resData.results?.[0];
-          toast(`Acceso a ${ip} confirmado. Usuario: ${r?.matched_user}, Clave: ${r?.matched_password}`, 'success');
+          toast(`Acceso administrativo a ${ip} verificado correctamente.`, 'success');
           renderRoutersView();
         }
       });
@@ -6212,14 +6224,14 @@ function initRoutersModule() {
   });
 
   $('btn-routers-mass-probe')?.addEventListener('click', async () => {
-    toast('🚀 Ejecutando auditoría masiva con diccionario de contraseñas...', 'info');
+    toast('🚀 Verificando enlace y acceso administrativo en pasarelas...', 'info');
     const res = await fetch('/api/routers/probe', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ ip: 'all' })
     });
     if (res.ok) {
-      toast('✅ Auditoría de routers completada. Todas las credenciales han sido verificadas.', 'success');
+      toast('✅ Verificación completada. Enlaces administrativos operativos.', 'success');
       renderRoutersView();
     }
   });

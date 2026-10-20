@@ -87,12 +87,9 @@ try:
     
     router_31_cat = next((r for r in routers if r.get("ip") == "192.168.3.1"), None)
     test("Catalog includes Porteria 192.168.3.1", router_31_cat is not None)
-    test("Router 192.168.3.1 has verified credentials", router_31_cat and router_31_cat.get("auth_status") == "verified", f"Matched: {router_31_cat.get('matched_user')}:{router_31_cat.get('matched_password')}")
-    
-    users = routers_res.get("default_users", [])
-    pwds = routers_res.get("default_passwords", [])
-    test("Users dictionary includes user list", "admin" in users and "administrador" in users and "administrator" in users)
-    test("Passwords dictionary includes user passwords", "Maquina12345*" in pwds and "Maquina669" in pwds and "0918273645" in pwds)
+    test("Router 192.168.3.1 has verified credentials", router_31_cat and router_31_cat.get("auth_status") == "verified")
+    test("Security: matched_password is NOT exposed in catalog", "matched_password" not in (router_31_cat or {}))
+    test("Security: default_passwords is NOT exposed in catalog", "default_passwords" not in routers_res)
 except Exception as e:
     test("Router catalog test", False, str(e))
 

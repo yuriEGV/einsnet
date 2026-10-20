@@ -9,6 +9,11 @@ desktop.ini
 Thumbs.db
 $RECYCLE.BIN/
 
+# Local Sensitive Config
+local_vault.json
+*.secret
+*.env
+
 # Editor / OS
 .vscode/
 .idea/
