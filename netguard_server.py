@@ -1233,7 +1233,7 @@ def probe_all_routers():
 # MÓDULO DE VIDEOVIGILANCIA Y CÁMARAS CCTV IP (ONVIF / RTSP ENGINE)
 # Credenciales de cámaras aseguradas localmente (qwert / 12345 en local_vault.json)
 # ═══════════════════════════════════════════════════════════════════════════
-CAMERA_CREDS = _creds.get("camera_credentials", {"user": "qwert", "password": "12345"})
+CAMERA_CREDS = _creds.get("camera_credentials", {"user": "admin", "password": "qwert12345/"})
 
 # Configuración del NVR Centralizado Hikvision (Sede Lynch)
 NVR_CONFIG = {
@@ -1256,62 +1256,10 @@ CAMERAS_CATALOG = {
         "ip": "192.168.80.64",
         "channel": 1,
         "channel_code": "101",
-        "name": "Cam 01 - Portería & Acceso LPR",
+        "name": "Cam 01 - Hall Central (Cuida al Marítimo)",
         "sede": "lynch",
-        "area": "Portería / Control Acceso Vehicular Principal (LPR)",
-        "model": "Hikvision DS-2CD4A26FWD-IZS / NVR Ch 1",
-        "type": "bullet",
-        "ptz_capable": True,
-        "ir_capable": True,
-        "resolution": "1080p FHD (1920x1080)",
-        "fps": 30,
-        "bitrate": "4096 Kbps",
-        "vlan": 1,
-        "mac": "3C:1B:F8:40:AF:18",
-        "mode": "day",
-        "ptz": {"pan": 0, "tilt": 0, "zoom": 1.0},
-        "recording": True,
-        "motion_detected": False,
-        "ports": [80, 554, 8000],
-        "preset": "P1 - Entrada Principal",
-        "rtsp_stream": "rtsp://192.168.80.64:554/Streaming/Channels/101",
-        "rtsp_substream": "rtsp://192.168.80.64:554/Streaming/Channels/102"
-    },
-    "cam-lynch-2": {
-        "id": "cam-lynch-2",
-        "ip": "192.168.80.64",
-        "channel": 2,
-        "channel_code": "201",
-        "name": "Cam 02 - Simulador Grúas STS/RTG",
-        "sede": "lynch",
-        "area": "Simulador Maniobras Portuarias / Bahía de Grúas",
-        "model": "Hikvision Speed Dome PTZ DS-2DE4425IW / NVR Ch 2",
-        "type": "dome_ptz",
-        "ptz_capable": True,
-        "ir_capable": True,
-        "resolution": "1080p FHD (1920x1080)",
-        "fps": 30,
-        "bitrate": "6144 Kbps",
-        "vlan": 30,
-        "mac": "3C:1B:F8:40:AF:18",
-        "mode": "day",
-        "ptz": {"pan": 15, "tilt": -5, "zoom": 2.0},
-        "recording": True,
-        "motion_detected": True,
-        "ports": [80, 554, 8000],
-        "preset": "P2 - Bahía Grúas STS",
-        "rtsp_stream": "rtsp://192.168.80.64:554/Streaming/Channels/201",
-        "rtsp_substream": "rtsp://192.168.80.64:554/Streaming/Channels/202"
-    },
-    "cam-lynch-3": {
-        "id": "cam-lynch-3",
-        "ip": "192.168.80.64",
-        "channel": 3,
-        "channel_code": "301",
-        "name": "Cam 03 - Entrada Peatonal Central",
-        "sede": "lynch",
-        "area": "Hall Entrada Principal / Torniquetes Peatonales",
-        "model": "Hikvision DarkFighter Dome DS-2CD2143G2 / NVR Ch 3",
+        "area": "Hall Entrada Principal / Diario Mural y Acceso (Sede Lynch)",
+        "model": "Hikvision NVR Ch 1 (MARITIMO LY 1)",
         "type": "dome",
         "ptz_capable": True,
         "ir_capable": True,
@@ -1325,19 +1273,71 @@ CAMERAS_CATALOG = {
         "recording": True,
         "motion_detected": False,
         "ports": [80, 554, 8000],
-        "preset": "P3 - Torniquetes Hall",
-        "rtsp_stream": "rtsp://192.168.80.64:554/Streaming/Channels/301",
-        "rtsp_substream": "rtsp://192.168.80.64:554/Streaming/Channels/302"
+        "preset": "P1 - Hall Principal",
+        "rtsp_stream": "rtsp://admin:qwert12345%2F@192.168.80.64:554/Streaming/Channels/101",
+        "rtsp_substream": "rtsp://admin:qwert12345%2F@192.168.80.64:554/Streaming/Channels/102"
+    },
+    "cam-lynch-2": {
+        "id": "cam-lynch-2",
+        "ip": "192.168.80.64",
+        "channel": 2,
+        "channel_code": "201",
+        "name": "Cam 02 - Comedor & Casino (MARITIMO LY 2)",
+        "sede": "lynch",
+        "area": "Casino de Alumnos / Sector Cocina Keuken (Sede Lynch)",
+        "model": "Hikvision NVR Ch 2 (MARITIMO LY 2)",
+        "type": "bullet",
+        "ptz_capable": True,
+        "ir_capable": True,
+        "resolution": "1080p FHD (1920x1080)",
+        "fps": 30,
+        "bitrate": "6144 Kbps",
+        "vlan": 1,
+        "mac": "3C:1B:F8:40:AF:18",
+        "mode": "day",
+        "ptz": {"pan": 0, "tilt": 0, "zoom": 1.0},
+        "recording": True,
+        "motion_detected": True,
+        "ports": [80, 554, 8000],
+        "preset": "P2 - Mesas Casino",
+        "rtsp_stream": "rtsp://admin:qwert12345%2F@192.168.80.64:554/Streaming/Channels/201",
+        "rtsp_substream": "rtsp://admin:qwert12345%2F@192.168.80.64:554/Streaming/Channels/202"
+    },
+    "cam-lynch-3": {
+        "id": "cam-lynch-3",
+        "ip": "192.168.80.64",
+        "channel": 3,
+        "channel_code": "301",
+        "name": "Cam 03 - Patio Interior & Jardineras (MARITIMO LY 3)",
+        "sede": "lynch",
+        "area": "Patio Central Alumnos / Jardineras y Bancas (Sede Lynch)",
+        "model": "Hikvision NVR Ch 3 (MARITIMO LY 3)",
+        "type": "dome",
+        "ptz_capable": True,
+        "ir_capable": True,
+        "resolution": "1080p FHD (1920x1080)",
+        "fps": 30,
+        "bitrate": "4096 Kbps",
+        "vlan": 1,
+        "mac": "3C:1B:F8:40:AF:18",
+        "mode": "day",
+        "ptz": {"pan": 0, "tilt": 0, "zoom": 1.0},
+        "recording": True,
+        "motion_detected": False,
+        "ports": [80, 554, 8000],
+        "preset": "P3 - Patio Central",
+        "rtsp_stream": "rtsp://admin:qwert12345%2F@192.168.80.64:554/Streaming/Channels/301",
+        "rtsp_substream": "rtsp://admin:qwert12345%2F@192.168.80.64:554/Streaming/Channels/302"
     },
     "cam-lynch-4": {
         "id": "cam-lynch-4",
         "ip": "192.168.80.64",
         "channel": 4,
         "channel_code": "401",
-        "name": "Cam 04 - Perímetro & Estacionamiento",
+        "name": "Cam 04 - Pasillo de Aulas (MARITIMO LY 4)",
         "sede": "lynch",
-        "area": "Perímetro Exterior Oeste & Estacionamiento Docente",
-        "model": "Hikvision Bullet DS-2CD2T46G2 / NVR Ch 4",
+        "area": "Corredor de Salas de Clases / Aulas 2° Piso (Sede Lynch)",
+        "model": "Hikvision NVR Ch 4 (MARITIMO LY 4)",
         "type": "bullet",
         "ptz_capable": True,
         "ir_capable": True,
@@ -1347,13 +1347,13 @@ CAMERAS_CATALOG = {
         "vlan": 1,
         "mac": "3C:1B:F8:40:AF:18",
         "mode": "day",
-        "ptz": {"pan": -20, "tilt": 5, "zoom": 1.0},
+        "ptz": {"pan": 0, "tilt": 0, "zoom": 1.0},
         "recording": True,
         "motion_detected": False,
         "ports": [80, 554, 8000],
-        "preset": "P4 - Perímetro Oeste",
-        "rtsp_stream": "rtsp://192.168.80.64:554/Streaming/Channels/401",
-        "rtsp_substream": "rtsp://192.168.80.64:554/Streaming/Channels/402"
+        "preset": "P4 - Pasillo Aulas",
+        "rtsp_stream": "rtsp://admin:qwert12345%2F@192.168.80.64:554/Streaming/Channels/401",
+        "rtsp_substream": "rtsp://admin:qwert12345%2F@192.168.80.64:554/Streaming/Channels/402"
     },
 
     # ── 4 CÁMARAS SEDE LEVARTE (MÓDULO A-15) ──
@@ -1463,11 +1463,20 @@ CAMERAS_CATALOG = {
     }
 }
 
+CCTV_SNAPSHOT_CACHE = {}
+
 def fetch_real_camera_snapshot(target_key_or_ip):
     """
     Intenta obtener una captura de vídeo real directamente desde el NVR o cámara
     a través de los protocolos HTTP ISAPI / ONVIF con autenticación Digest/Basic.
     """
+    # 0. Caché en memoria por 3 segundos para evitar saturación de sockets
+    now_t = time.time()
+    if target_key_or_ip in CCTV_SNAPSHOT_CACHE:
+        c_time, c_bytes, c_mime = CCTV_SNAPSHOT_CACHE[target_key_or_ip]
+        if now_t - c_time < 3.0:
+            return c_bytes, c_mime
+
     cam = CAMERAS_CATALOG.get(target_key_or_ip)
     if not cam:
         for k, v in CAMERAS_CATALOG.items():
@@ -1483,8 +1492,8 @@ def fetch_real_camera_snapshot(target_key_or_ip):
     ch_code = cam.get("channel_code", "101")
     ch_num = cam.get("channel", 1)
 
-    user = CAMERA_CREDS.get("user", "qwert")
-    pwd = CAMERA_CREDS.get("password", "12345")
+    user = CAMERA_CREDS.get("user", "admin")
+    pwd = CAMERA_CREDS.get("password", "qwert12345/")
 
     # Endpoints reales de captura para Hikvision NVR y Cámaras IP
     endpoints = []
@@ -1493,58 +1502,32 @@ def fetch_real_camera_snapshot(target_key_or_ip):
             f"http://{target_ip}:{NVR_CONFIG['http_port']}/ISAPI/Streaming/channels/{ch_code}/picture",
             f"http://{target_ip}:{NVR_CONFIG['http_port']}/ISAPI/Streaming/channels/{ch_num}01/picture",
             f"http://{target_ip}:{NVR_CONFIG['http_port']}/onvif-http/snapshot?channel={ch_num}&subtype=0",
-            f"http://{target_ip}:{NVR_CONFIG['http_port']}/Streaming/channels/{ch_num}/picture",
-            f"http://{target_ip}:{NVR_CONFIG['http_port']}/cgi-bin/snapshot.cgi?channel={ch_num}",
         ])
     else:
         endpoints.extend([
             f"http://{target_ip}/ISAPI/Streaming/channels/101/picture",
             f"http://{target_ip}/onvif-http/snapshot?channel=1&subtype=0",
-            f"http://{target_ip}/Streaming/channels/1/picture",
-            f"http://{target_ip}/cgi-bin/snapshot.cgi",
-            f"http://{target_ip}/snapshot.jpg",
         ])
 
-    # 1. Probar con requests si está instalado (DigestAuth / BasicAuth nativo RFC 7616)
+    # Probar DigestAuth y BasicAuth nativo con credenciales configuradas
     if HAS_REQUESTS:
         for url in endpoints:
-            for u, p in [(user, pwd), ("admin", pwd), ("admin", "12345")]:
-                try:
-                    r = requests.get(url, auth=HTTPDigestAuth(u, p), timeout=0.8, headers={"User-Agent": "EinsNet-CCTV/5.0"})
-                    if r.status_code == 200 and len(r.content) > 500 and (r.content.startswith(b'\xff\xd8') or b'JFIF' in r.content[:30] or b'PNG' in r.content[:10]):
-                        NVR_CONFIG["status"] = "online"
-                        return r.content, "image/jpeg"
-                except Exception:
-                    pass
-                try:
-                    r = requests.get(url, auth=HTTPBasicAuth(u, p), timeout=0.8, headers={"User-Agent": "EinsNet-CCTV/5.0"})
-                    if r.status_code == 200 and len(r.content) > 500 and (r.content.startswith(b'\xff\xd8') or b'JFIF' in r.content[:30] or b'PNG' in r.content[:10]):
-                        NVR_CONFIG["status"] = "online"
-                        return r.content, "image/jpeg"
-                except Exception:
-                    pass
-
-    # 2. Fallback estándar con urllib
-    try:
-        password_mgr = urllib.request.HTTPPasswordMgrWithDefaultRealm()
-        password_mgr.add_password(None, f"http://{target_ip}", user, pwd)
-        auth_handler = urllib.request.HTTPDigestAuthHandler(password_mgr)
-        basic_handler = urllib.request.HTTPBasicAuthHandler(password_mgr)
-        opener = urllib.request.build_opener(auth_handler, basic_handler)
-
-        for url in endpoints:
             try:
-                req = urllib.request.Request(url, headers={"User-Agent": "EinsNet-CCTV/5.0"})
-                with opener.open(req, timeout=1.0) as resp:
-                    if resp.status == 200:
-                        raw_bytes = resp.read()
-                        if len(raw_bytes) > 500 and (raw_bytes.startswith(b'\xff\xd8') or b'JFIF' in raw_bytes[:30] or b'PNG' in raw_bytes[:10]):
-                            NVR_CONFIG["status"] = "online"
-                            return raw_bytes, "image/jpeg"
+                r = requests.get(url, auth=HTTPDigestAuth(user, pwd), timeout=0.8, headers={"User-Agent": "EinsNet-CCTV/5.0"})
+                if r.status_code == 200 and len(r.content) > 500 and (r.content.startswith(b'\xff\xd8') or b'JFIF' in r.content[:30] or b'PNG' in r.content[:10]):
+                    NVR_CONFIG["status"] = "online"
+                    CCTV_SNAPSHOT_CACHE[target_key_or_ip] = (now_t, r.content, "image/jpeg")
+                    return r.content, "image/jpeg"
             except Exception:
-                continue
-    except Exception:
-        pass
+                pass
+            try:
+                r = requests.get(url, auth=HTTPBasicAuth(user, pwd), timeout=0.8, headers={"User-Agent": "EinsNet-CCTV/5.0"})
+                if r.status_code == 200 and len(r.content) > 500 and (r.content.startswith(b'\xff\xd8') or b'JFIF' in r.content[:30] or b'PNG' in r.content[:10]):
+                    NVR_CONFIG["status"] = "online"
+                    CCTV_SNAPSHOT_CACHE[target_key_or_ip] = (now_t, r.content, "image/jpeg")
+                    return r.content, "image/jpeg"
+            except Exception:
+                pass
 
     return None, None
 

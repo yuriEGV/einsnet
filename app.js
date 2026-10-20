@@ -6371,8 +6371,7 @@ async function renderCamerasDashboard() {
             <img src="/api/cameras/snapshot?ip=${camTargetKey}&t=${Date.now()}" 
                  alt="${escapeHtml(c.name)}" 
                  class="cctv-stream-img" 
-                 id="${imgDomId}"
-                 onerror="setTimeout(()=>{ this.src = '/api/cameras/snapshot?ip=${camTargetKey}&t=' + Date.now(); }, 1500);" />
+                 id="${imgDomId}" />
             <div class="cctv-osd-badge">
               ${c.resolution} · ${c.fps} FPS · ${c.bitrate}
             </div>
