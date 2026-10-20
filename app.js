@@ -435,6 +435,7 @@ document.querySelectorAll('.nav-item').forEach(btn=>{
     if(v==='bridge') renderBridgeView();
     if(v==='antitheft') renderAntitheftView();
     if(v==='routers') renderRoutersView();
+    if(v==='cameras') renderCamerasDashboard();
   });
 });
 
@@ -4927,6 +4928,7 @@ function init(){
   initModalSubyugadasEvents();
   initAntitheftModule();
   initRoutersModule();
+  initCamerasModule();
   syncLiveHostStatus();
   setInterval(syncLiveHostStatus, 3500);
 
@@ -6267,16 +6269,322 @@ function initRoutersModule() {
   $('btn-cli-ping')?.addEventListener('click', () => runRouterCliAction('ping'));
 }
 
+// ═══════════════════════════════════════════════════════════════════
+//  MÓDULO: DASHBOARD DE CÁMARAS CCTV IP & VIDEOVIGILANCIA
+// ═══════════════════════════════════════════════════════════════════
+let camerasSedeFilter = 'all';
+let camerasLayoutMode = 'grid';
+let camerasDataCache = [];
+let focusedCameraIp = null;
+
+async function renderCamerasDashboard() {
+  const container = $('cameras-grid-container');
+  if (!container) return;
+
+  try {
+    const res = await fetch('/api/cameras/catalog');
+    if (!res.ok) {
+      container.innerHTML = '<div style="padding:20px;color:#ef4444;">No se pudo consultar el catálogo de cámaras CCTV.</div>';
+      return;
+    }
+    const data = await res.json();
+    camerasDataCache = data.cameras || [];
+
+    // Actualizar KPIs
+    const onlineCount = camerasDataCache.filter(c => c.status === 'online').length;
+    const stOnline = $('cam-stat-online');
+    if (stOnline) stOnline.textContent = `${onlineCount} / ${camerasDataCache.length} Operativas`;
+
+    const filtered = camerasDataCache.filter(c => {
+      if (camerasSedeFilter === 'all') return true;
+      return c.sede === camerasSedeFilter;
+    });
+
+    if (camerasLayoutMode === 'focus') {
+      container.className = 'cameras-grid-focus';
+    } else {
+      container.className = 'cameras-grid-2x2';
+    }
+
+    const displayCams = (camerasLayoutMode === 'focus' && focusedCameraIp)
+      ? filtered.filter(c => c.ip === focusedCameraIp)
+      : filtered;
+
+    if (displayCams.length === 0 && filtered.length > 0) {
+      focusedCameraIp = filtered[0].ip;
+    }
+
+    const finalCams = (displayCams.length > 0 ? displayCams : filtered);
+
+    container.innerHTML = finalCams.map(c => {
+      const isLynch = c.sede === 'lynch';
+      const sedeClass = isLynch ? 'sede-lynch' : 'sede-levarte';
+      const sedeLabel = isLynch ? '🏫 Lynch' : '📍 Levarte';
+      const ptz = c.ptz || { pan: 0, tilt: 0, zoom: 1.0 };
+      const curMode = c.mode || 'day';
+      const isRec = Boolean(c.recording);
+
+      return `
+        <div class="cctv-card" data-ip="${c.ip}">
+          <div class="cctv-card-header">
+            <div class="cctv-card-title">
+              <span style="font-size:16px;">📹</span>
+              <div>
+                <h3>${escapeHtml(c.name)}</h3>
+                <span style="font-size:10.5px;color:#94a3b8;font-family:var(--mono);">${c.ip} · ${escapeHtml(c.model)}</span>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span class="sede-badge ${sedeClass}" style="font-size:10px;">${sedeLabel}</span>
+              ${isRec 
+                ? '<span class="badge" style="background:rgba(239,68,68,0.2);color:#f87171;font-size:10px;border:1px solid rgba(239,68,68,0.4);"><span class="pulse-red-dot"></span> REC</span>'
+                : '<span class="badge" style="background:rgba(100,116,139,0.2);color:#94a3b8;font-size:10px;">PAUSA</span>'
+              }
+            </div>
+          </div>
+
+          <!-- Live CCTV Viewport Stream -->
+          <div class="cctv-viewport-box" title="Clic para alternar enfoque de cámara">
+            <img src="/api/cameras/snapshot?ip=${c.ip}&t=${Date.now()}" 
+                 alt="${escapeHtml(c.name)}" 
+                 class="cctv-stream-img" 
+                 id="cctv-img-${c.ip.replace(/\./g, '_')}" />
+            <div class="cctv-osd-badge">
+              ${c.resolution} · ${c.fps} FPS · ${c.bitrate}
+            </div>
+          </div>
+
+          <!-- Barra de Control y Manipulación -->
+          <div class="cctv-control-strip">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+              <div class="cctv-mode-selector">
+                <span style="font-size:11px;color:#94a3b8;font-weight:600;">Modo:</span>
+                <button class="cctv-mode-btn ${curMode === 'day' ? 'active' : ''}" data-ip="${c.ip}" data-mode="day">☀️ Día</button>
+                <button class="cctv-mode-btn ${curMode === 'night_ir' ? 'active' : ''}" data-ip="${c.ip}" data-mode="night_ir">🌙 IR Noche</button>
+                <button class="cctv-mode-btn ${curMode === 'thermal' ? 'active' : ''}" data-ip="${c.ip}" data-mode="thermal">🔥 Térmica</button>
+              </div>
+
+              <!-- Mini Joystick PTZ -->
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="font-size:11px;color:#94a3b8;font-weight:600;">PTZ:</span>
+                <div class="ptz-mini-dpad">
+                  <div></div>
+                  <button class="ptz-btn" data-ip="${c.ip}" data-ptz="up" title="Mover Arriba (Tilt +)">▲</button>
+                  <div></div>
+                  <button class="ptz-btn" data-ip="${c.ip}" data-ptz="left" title="Mover Izquierda (Pan -)">◀</button>
+                  <button class="ptz-btn home-btn" data-ip="${c.ip}" data-ptz="home" title="Posición Inicial (Home)">●</button>
+                  <button class="ptz-btn" data-ip="${c.ip}" data-ptz="right" title="Mover Derecha (Pan +)">▶</button>
+                  <div></div>
+                  <button class="ptz-btn" data-ip="${c.ip}" data-ptz="down" title="Mover Abajo (Tilt -)">▼</button>
+                  <div></div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:3px;">
+                  <button class="ptz-btn" data-ip="${c.ip}" data-ptz="zoom_in" title="Acercar (Zoom In)" style="width:28px;height:24px;font-size:11px;">➕</button>
+                  <button class="ptz-btn" data-ip="${c.ip}" data-ptz="zoom_out" title="Alejar (Zoom Out)" style="width:28px;height:24px;font-size:11px;">➖</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Acciones Rápidas -->
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;border-top:1px solid rgba(255,255,255,0.06);padding-top:8px;">
+              <div style="font-size:11px;color:#64748b;font-family:var(--mono);">
+                <span>Ángulo: Pan ${ptz.pan}° · Tilt ${ptz.tilt}° · Zoom ${ptz.zoom}x</span>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <button class="btn-sm btn-cctv-snap" data-ip="${c.ip}" style="border-color:#38bdf8;color:#38bdf8;padding:2px 8px;" title="Descargar captura pericial de imagen">📸 Snapshot</button>
+                <button class="btn-sm btn-cctv-rec" data-ip="${c.ip}" style="border-color:#ef4444;color:#f87171;padding:2px 8px;" title="Alternar grabación en NVR">${isRec ? '⏹ Pausar' : '🔴 Grabar'}</button>
+                <button class="btn-sm btn-cctv-reboot" data-ip="${c.ip}" style="border-color:#f59e0b;color:#fbbf24;padding:2px 8px;" title="Reinicio remoto ONVIF">🔄 Reboot</button>
+                <a href="${c.web_admin}" target="_blank" class="btn-sm" style="border-color:var(--cyan);color:var(--cyan);text-decoration:none;padding:2px 8px;" title="Abrir Web Admin de la cámara">🌐 Web</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Event listeners para PTZ
+    container.querySelectorAll('.ptz-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const ip = btn.dataset.ip;
+        const ptzAction = btn.dataset.ptz;
+        if (!ip || !ptzAction) return;
+
+        try {
+          const res = await fetch('/api/cameras/ptz', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ip, action: ptzAction, step: 10 })
+          });
+          if (res.ok) {
+            const imgEl = $(`cctv-img-${ip.replace(/\./g, '_')}`);
+            if (imgEl) imgEl.src = `/api/cameras/snapshot?ip=${ip}&t=${Date.now()}`;
+            toast(`PTZ ${ptzAction.toUpperCase()} aplicado en ${ip}`, 'info');
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      });
+    });
+
+    // Event listeners para Filtro de Modo (Día / IR / Térmico)
+    container.querySelectorAll('.cctv-mode-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const ip = btn.dataset.ip;
+        const mode = btn.dataset.mode;
+        if (!ip || !mode) return;
+
+        try {
+          const res = await fetch('/api/cameras/mode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ip, mode })
+          });
+          if (res.ok) {
+            toast(`Cámara ${ip}: Modo ${mode.toUpperCase()} activado`, 'success');
+            renderCamerasDashboard();
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      });
+    });
+
+    // Clic en viewport para alternar modo focus
+    container.querySelectorAll('.cctv-viewport-box').forEach(box => {
+      box.addEventListener('click', (e) => {
+        const card = box.closest('.cctv-card');
+        if (!card) return;
+        const ip = card.dataset.ip;
+        focusedCameraIp = ip;
+        camerasLayoutMode = (camerasLayoutMode === 'focus' ? 'grid' : 'focus');
+        document.querySelectorAll('#cameras-layout-filter .seg-btn').forEach(b => {
+          b.classList.toggle('active', b.dataset.camLayout === camerasLayoutMode);
+        });
+        renderCamerasDashboard();
+      });
+    });
+
+    // Acciones rápidas (Snapshot, Rec, Reboot)
+    container.querySelectorAll('.btn-cctv-snap').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const ip = btn.dataset.ip;
+        window.open(`/api/cameras/snapshot?ip=${ip}&t=${Date.now()}`, '_blank');
+        toast(`Instantánea de evidencia capturada para ${ip}`, 'success');
+      });
+    });
+
+    container.querySelectorAll('.btn-cctv-rec').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const ip = btn.dataset.ip;
+        const res = await fetch('/api/cameras/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ip, action: 'record_toggle' })
+        });
+        if (res.ok) {
+          const d = await res.json();
+          toast(d.message || 'Estado de grabación actualizado', 'info');
+          renderCamerasDashboard();
+        }
+      });
+    });
+
+    container.querySelectorAll('.btn-cctv-reboot').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const ip = btn.dataset.ip;
+        if (!confirm(`¿Confirmas reiniciar el procesador de video de la cámara ${ip}?`)) return;
+        toast(`Reiniciando cámara ${ip} vía comando ONVIF...`, 'warning');
+        const res = await fetch('/api/cameras/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ip, action: 'reboot' })
+        });
+        if (res.ok) {
+          toast(`Comando de reinicio ejecutado con éxito en ${ip}`, 'success');
+        }
+      });
+    });
+
+  } catch (e) {
+    container.innerHTML = `<div style="padding:20px;color:#ef4444;">Error en Videovigilancia: ${e.message}</div>`;
+  }
+}
+
+function initCamerasModule() {
+  // Navegación desde Header
+  $('btn-header-cameras')?.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    $('nav-cameras')?.classList.add('active');
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    $('view-cameras')?.classList.add('active');
+    state.currentView = 'cameras';
+    renderCamerasDashboard();
+  });
+
+  // Filtro de Sede (Todas / Lynch / Levarte)
+  document.querySelectorAll('#cameras-sede-filter .seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#cameras-sede-filter .seg-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      camerasSedeFilter = btn.dataset.camSede;
+      renderCamerasDashboard();
+    });
+  });
+
+  // Filtro de Layout (Mosaico 2x2 vs Detalle PTZ)
+  document.querySelectorAll('#cameras-layout-filter .seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#cameras-layout-filter .seg-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      camerasLayoutMode = btn.dataset.camLayout;
+      renderCamerasDashboard();
+    });
+  });
+
+  // Botón Actualizar
+  $('btn-cameras-refresh')?.addEventListener('click', () => {
+    toast('Actualizando señales de video CCTV...', 'info');
+    renderCamerasDashboard();
+  });
+
+  // Botón Capturar Todas
+  $('btn-cameras-snap-all')?.addEventListener('click', () => {
+    toast('📸 Captura múltiple ejecutada: instantáneas periciales archivadas.', 'success');
+    camerasDataCache.forEach(c => {
+      window.open(`/api/cameras/snapshot?ip=${c.ip}&t=${Date.now()}`, '_blank');
+    });
+  });
+
+  // Actualización periódica suave de timecode en cámaras cuando la vista está activa
+  setInterval(() => {
+    if (state.currentView === 'cameras') {
+      camerasDataCache.forEach(c => {
+        const imgEl = $(`cctv-img-${c.ip.replace(/\./g, '_')}`);
+        if (imgEl) {
+          imgEl.src = `/api/cameras/snapshot?ip=${c.ip}&t=${Date.now()}`;
+        }
+      });
+    }
+  }, 4500);
+}
+
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     initBridgeEvents();
     initAntitheftModule();
     initRoutersModule();
+    initCamerasModule();
   });
 } else {
   initBridgeEvents();
   initAntitheftModule();
   initRoutersModule();
+  initCamerasModule();
 }
 
 window.addEventListener('resize',()=>{ resizeCanvas(); });

@@ -60,7 +60,7 @@
     <div class="sede-pill" id="sede-pill" title="Clic para alternar sede o ver Enlace Inter-Sedes (Lynch ↔ Levarte)" style="display:inline-flex;align-items:center;gap:6px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);border-radius:12px;padding:4px 10px;font-size:11.5px;color:#34d399;font-weight:700;cursor:pointer;"><span style="color:#10b981;">📍</span> <strong>Sede Levarte</strong> <span style="font-size:10px;color:#94a3b8;">· 🟢 Enlazado Lynch</span></div>
     <button class="btn-sm" id="btn-subyugadas-header" title="Ver Mapeo y Redes Subyugadas al Router Principal FortiGate (192.168.1.99)" style="border-color:#38bdf8;color:#38bdf8;display:inline-flex;align-items:center;gap:5px;font-weight:700;">🌐 Redes Subyugadas</button>
     <div class="scan-status" id="scan-status"><span class="pulse-green-dot"></span> Red activa</div>
-    <button class="btn-sm" id="btn-header-antitheft" title="Vigilancia Silenciosa: Clic para Armar / Desarmar monitoreo discreto de activos críticos" style="border-color:#0ea5e9;color:#38bdf8;display:inline-flex;align-items:center;gap:5px;font-weight:700;"><span id="header-antitheft-icon">🛡️</span> <span id="header-antitheft-text">Sigilo: OFF</span></button>
+    <button class="btn-sm" id="btn-header-cameras" title="Dashboard de Videovigilancia y Cámaras IP" style="border-color:#10b981;color:#34d399;display:inline-flex;align-items:center;gap:5px;font-weight:700;">📹 Cámaras</button>
     <button class="btn-sm" id="btn-header-routers" title="Bóveda de Credenciales y Control de Routers" style="border-color:#0284c7;color:#38bdf8;display:inline-flex;align-items:center;gap:5px;font-weight:700;">🖧 Routers</button>
     <button class="btn-emergency pulse-emergency" id="btn-emergency-broadcast" title="Emitir mensaje de emergencia y evacuación a toda la red">🚨 Evacuación</button>
     <a href="/alerta" target="_blank" class="btn-app-install" id="btn-intercom-portal" title="Abrir Intercomunicador y Buzón de Mensajes" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px;">💬 Chat LAN <span id="inbox-count" style="background:#10b981;color:#050b18;font-size:10px;padding:1px 5px;border-radius:10px;font-weight:700;">1</span></a>
@@ -117,6 +117,10 @@
         <span class="nav-badge" id="nav-badge">0</span>
       </button>
       <div class="nav-section-label">HERRAMIENTAS</div>
+      <button class="nav-item" data-view="cameras" id="nav-cameras">
+        <span class="nav-icon">📹</span> CCTV Videovigilancia
+        <span class="nav-badge" style="background:#10b981;color:#050b18;font-weight:700;" id="cameras-badge">REC</span>
+      </button>
       <button class="nav-item" data-view="routers" id="nav-routers">
         <span class="nav-icon">🖧</span> Control de Routers
         <span class="nav-badge" style="background:#0284c7;color:#fff;font-weight:700;">VAULT</span>
@@ -1652,6 +1656,77 @@
 Selecciona un router y presiona una acción para ejecutar comandos administrativos en la red...
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- ══ VIEW: DASHBOARD DE CÁMARAS CCTV IP & VIDEOVIGILANCIA ══ -->
+    <div class="view" id="view-cameras">
+      <div class="view-header" style="flex-wrap:wrap;gap:12px;">
+        <div>
+          <h2>📹 Centro de Videovigilancia & Cámaras CCTV IP</h2>
+          <span style="font-size:12px;color:var(--text-3);display:block;margin-top:2px;">
+            Supervisión perimetral, control PTZ (Pan/Tilt/Zoom), visión nocturna IR y captura de evidencia en Lynch y Levarte
+          </span>
+        </div>
+        <div class="view-controls">
+          <div class="map-mode-segmented" id="cameras-sede-filter">
+            <button class="seg-btn active" data-cam-sede="all">🌐 Todas</button>
+            <button class="seg-btn" data-cam-sede="lynch">🏫 Sede Lynch</button>
+            <button class="seg-btn" data-cam-sede="levarte">📍 Sede Levarte</button>
+          </div>
+          <div class="map-mode-segmented" id="cameras-layout-filter" style="margin-left:4px;">
+            <button class="seg-btn active" data-cam-layout="grid" title="Mosaico Multicámara">🔲 Mosaico 2x2</button>
+            <button class="seg-btn" data-cam-layout="focus" title="Cámara Seleccionada con Joystick PTZ">🔳 Detalle PTZ</button>
+          </div>
+          <button class="btn-sm" id="btn-cameras-refresh" style="border-color:var(--cyan);color:var(--cyan);">🔄 Actualizar</button>
+          <button class="btn-sm" id="btn-cameras-snap-all" style="background:#0284c7;color:#fff;border-color:#0284c7;font-weight:700;">📸 Capturar Todas</button>
+        </div>
+      </div>
+
+      <!-- Banner de Estado de Seguridad ONVIF / RTSP -->
+      <div class="plano-wan-banner" style="border-color:rgba(16,185,129,0.3);background:rgba(16,185,129,0.06);margin-top:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:22px;">🎥</span>
+            <div style="font-size:12px;line-height:1.4;">
+              <strong style="color:#34d399;">Circuito Cerrado de Televisión (CCTV) Operativo:</strong>
+              <span style="color:#94a3b8;">Transmisión RTSP (Puerto 554) y Control ONVIF Profile S (Puerto 80/8000) integrados en EinsNet.</span>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="badge" style="background:rgba(2,132,199,0.18);color:#38bdf8;font-size:11px;border:1px solid rgba(2,132,199,0.4);">
+              🔒 ONVIF Auth: <code style="color:#a78bfa;">qwert</code> / ●●●●● (Protegida)
+            </span>
+            <span class="badge badge-success" style="font-size:11px;">
+              <span class="pulse-green-dot"></span> EN VIVO
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Estadísticas Rápidas de Videovigilancia -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:10px;margin-top:10px;">
+        <div class="card" style="padding:10px 14px;border-left:3px solid #10b981;">
+          <div style="font-size:11px;color:#94a3b8;">Cámaras en Línea</div>
+          <div style="font-size:17px;font-weight:700;color:#10b981;" id="cam-stat-online">4 / 4 Operativas</div>
+        </div>
+        <div class="card" style="padding:10px 14px;border-left:3px solid #38bdf8;">
+          <div style="font-size:11px;color:#94a3b8;">Grabación NVR Central</div>
+          <div style="font-size:17px;font-weight:700;color:#38bdf8;" id="cam-stat-rec">🔴 Grabando (24/7)</div>
+        </div>
+        <div class="card" style="padding:10px 14px;border-left:3px solid #a78bfa;">
+          <div style="font-size:11px;color:#94a3b8;">Calidad de Transmisión</div>
+          <div style="font-size:17px;font-weight:700;color:#a78bfa;">1080p FHD · 30 FPS</div>
+        </div>
+        <div class="card" style="padding:10px 14px;border-left:3px solid #f59e0b;">
+          <div style="font-size:11px;color:#94a3b8;">Sensor de Intrusión / Movimiento</div>
+          <div style="font-size:17px;font-weight:700;color:#f59e0b;">🛡️ Enlazado a Antirrobo</div>
+        </div>
+      </div>
+
+      <!-- Contenedor Principal: Mosaico de Cámaras -->
+      <div id="cameras-grid-container" style="margin-top:10px;" class="cameras-grid-2x2">
+        <!-- Renderizado dinámico desde app.js -->
       </div>
     </div>
 
