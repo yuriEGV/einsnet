@@ -425,6 +425,7 @@ document.querySelectorAll('.nav-item').forEach(btn=>{
     document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
     $('view-'+v).classList.add('active');
     state.currentView=v;
+    if(typeof stopAllCameraStreams === 'function' && v !== 'cameras') stopAllCameraStreams();
     if(v==='traffic') renderTrafficCharts();
     if(v==='devices') renderDevicesTable();
     if(v==='connections') renderConnections();
@@ -6274,8 +6275,105 @@ function initRoutersModule() {
 // ═══════════════════════════════════════════════════════════════════
 let camerasSedeFilter = 'lynch';
 let camerasLayoutMode = 'grid';
+let camerasFpsMode = 'ultra'; // 'ultra' (~220ms), 'fluid' (1000ms), 'paused'
 let camerasDataCache = [];
 let focusedCameraIp = null;
+const cameraStreamLoops = {}; // { [camKey]: { active: bool, timer: any, inFlight: bool, lastLatency: number } }
+
+function updateCameraLatencyTelemetry(ms) {
+  const el = $('cam-latency-stat');
+  if (el) {
+    el.innerHTML = `${ms} ms <span style="font-size:10px;color:#94a3b8;font-weight:normal;">(LAN FortiGate)</span>`;
+    el.style.color = ms < 150 ? '#34d399' : '#f59e0b';
+  }
+}
+
+function stopAllCameraStreams() {
+  Object.keys(cameraStreamLoops).forEach(key => {
+    const loop = cameraStreamLoops[key];
+    if (loop) {
+      if (loop.timer) clearTimeout(loop.timer);
+      loop.timer = null;
+      loop.active = false;
+      loop.inFlight = false;
+    }
+  });
+}
+
+function startCameraStreamLoop(camTargetKey) {
+  if (camerasFpsMode === 'paused') return;
+  if (state.currentView !== 'cameras') return;
+
+  const imgDomId = `cctv-img-${camTargetKey.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+  const targetImg = $(imgDomId);
+  if (!targetImg) return;
+
+  // Detener temporizador previo si existía
+  if (cameraStreamLoops[camTargetKey]?.timer) {
+    clearTimeout(cameraStreamLoops[camTargetKey].timer);
+  }
+
+  cameraStreamLoops[camTargetKey] = {
+    active: true,
+    timer: null,
+    inFlight: false,
+    lastLatency: 0
+  };
+
+  const runLoop = () => {
+    const loop = cameraStreamLoops[camTargetKey];
+    if (!loop || !loop.active) return;
+    if (camerasFpsMode === 'paused' || state.currentView !== 'cameras') {
+      loop.active = false;
+      return;
+    }
+
+    const currentImg = $(imgDomId);
+    if (!currentImg || !currentImg.isConnected) {
+      loop.active = false;
+      return;
+    }
+
+    if (loop.inFlight) return;
+    loop.inFlight = true;
+
+    const tStart = performance.now();
+    const isSub = (camerasLayoutMode !== 'focus');
+    const streamType = isSub ? 'sub' : 'main';
+    const preloader = new Image();
+
+    preloader.onload = () => {
+      loop.inFlight = false;
+      const elapsed = Math.round(performance.now() - tStart);
+      loop.lastLatency = elapsed;
+
+      // Actualización atómica en DOM sin parpadeo (Double Buffering)
+      if (currentImg && currentImg.isConnected) {
+        currentImg.src = preloader.src;
+      }
+
+      updateCameraLatencyTelemetry(elapsed);
+
+      if (loop.active && camerasFpsMode !== 'paused' && state.currentView === 'cameras') {
+        const intervalDelay = camerasFpsMode === 'ultra' ? 220 : 1000;
+        loop.timer = setTimeout(runLoop, intervalDelay);
+      }
+    };
+
+    preloader.onerror = () => {
+      loop.inFlight = false;
+      if (loop.active && camerasFpsMode !== 'paused' && state.currentView === 'cameras') {
+        loop.timer = setTimeout(runLoop, 1200);
+      }
+    };
+
+    preloader.src = `/api/cameras/snapshot?ip=${encodeURIComponent(camTargetKey)}&stream=${streamType}&t=${Date.now()}`;
+  };
+
+  // Desfase suave (stagger) para distribuir peticiones concurrentes
+  const activeCount = Object.keys(cameraStreamLoops).length;
+  setTimeout(runLoop, (activeCount % 4) * 60);
+}
 
 async function renderCamerasDashboard() {
   const container = $('cameras-grid-container');
@@ -6294,7 +6392,7 @@ async function renderCamerasDashboard() {
     // Sincronizar barra NVR
     const nvrInput = $('nvr-ip-input');
     if (nvrInput && !nvrInput.matches(':focus')) {
-      nvrInput.value = nvr.ip || '192.168.1.64';
+      nvrInput.value = nvr.ip || '192.168.80.64';
     }
     const nvrBadge = $('nvr-status-badge');
     if (nvrBadge) {
@@ -6368,7 +6466,7 @@ async function renderCamerasDashboard() {
 
           <!-- Live CCTV Viewport Stream -->
           <div class="cctv-viewport-box" title="Clic para alternar enfoque de cámara">
-            <img src="/api/cameras/snapshot?ip=${camTargetKey}&t=${Date.now()}" 
+            <img src="/api/cameras/snapshot?ip=${camTargetKey}&stream=${camerasLayoutMode === 'focus' ? 'main' : 'sub'}&t=${Date.now()}" 
                  alt="${escapeHtml(c.name)}" 
                  class="cctv-stream-img" 
                  id="${imgDomId}" />
@@ -6424,6 +6522,13 @@ async function renderCamerasDashboard() {
         </div>
       `;
     }).join('');
+
+    // Iniciar bucles de streaming en vivo para las cámaras visibles
+    stopAllCameraStreams();
+    finalCams.forEach(c => {
+      const camTargetKey = c.id || c.ip;
+      startCameraStreamLoop(camTargetKey);
+    });
 
     // Event listeners para PTZ
     container.querySelectorAll('.ptz-btn').forEach(btn => {
@@ -6547,6 +6652,27 @@ function initCamerasModule() {
     renderCamerasDashboard();
   });
 
+  // Selector de Modo de Latencia / Streaming FPS
+  document.querySelectorAll('#cameras-fps-filter .seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#cameras-fps-filter .seg-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      camerasFpsMode = btn.dataset.camFps || 'ultra';
+
+      if (camerasFpsMode === 'paused') {
+        stopAllCameraStreams();
+        toast('Transmisión de cámaras pausada', 'info');
+      } else {
+        toast(`Modo de transmisión: ${camerasFpsMode === 'ultra' ? '⚡ Ultra Baja Latencia (250ms)' : '🟢 1 FPS'}`, 'success');
+        stopAllCameraStreams();
+        camerasDataCache.forEach(c => {
+          const target = c.id || c.ip;
+          startCameraStreamLoop(target);
+        });
+      }
+    });
+  });
+
   // Filtro de Sede (Lynch 4 Cams / Levarte 4 Cams / Todas 8 Cams)
   document.querySelectorAll('#cameras-sede-filter .seg-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -6602,20 +6728,6 @@ function initCamerasModule() {
       window.open(`/api/cameras/snapshot?ip=${target}&t=${Date.now()}`, '_blank');
     });
   });
-
-  // Actualización periódica suave de timecode en cámaras cuando la vista está activa
-  setInterval(() => {
-    if (state.currentView === 'cameras') {
-      camerasDataCache.forEach(c => {
-        const target = c.id || c.ip;
-        const imgDomId = `cctv-img-${target.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
-        const imgEl = $(imgDomId);
-        if (imgEl) {
-          imgEl.src = `/api/cameras/snapshot?ip=${target}&t=${Date.now()}`;
-        }
-      });
-    }
-  }, 4500);
 }
 
 if (document.readyState === 'loading') {

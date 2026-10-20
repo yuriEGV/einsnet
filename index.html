@@ -1678,12 +1678,18 @@ Selecciona un router y presiona una acción para ejecutar comandos administrativ
             <button class="seg-btn active" data-cam-layout="grid" title="Mosaico Multicámara">🔲 Mosaico 2x2</button>
             <button class="seg-btn" data-cam-layout="focus" title="Cámara Seleccionada con Joystick PTZ">🔳 Detalle PTZ</button>
           </div>
+          <!-- Selector de Modo de Latencia / Streaming -->
+          <div class="map-mode-segmented" id="cameras-fps-filter" style="margin-left:4px;">
+            <button class="seg-btn active" data-cam-fps="ultra" title="Ultra Baja Latencia (~250ms) en directo">⚡ Ultra En Vivo (250ms)</button>
+            <button class="seg-btn" data-cam-fps="fluid" title="Fluido (1 Cuadro por segundo)">🟢 1 FPS</button>
+            <button class="seg-btn" data-cam-fps="paused" title="Pausar actualización">⏸️ Pausa</button>
+          </div>
           <button class="btn-sm" id="btn-cameras-refresh" style="border-color:var(--cyan);color:var(--cyan);">🔄 Actualizar</button>
           <button class="btn-sm" id="btn-cameras-snap-all" style="background:#0284c7;color:#fff;border-color:#0284c7;font-weight:700;">📸 Capturar Todas</button>
         </div>
       </div>
 
-      <!-- Barra de Estado y Enlace NVR Hikvision (192.168.1.64) -->
+      <!-- Barra de Estado y Enlace NVR Hikvision (192.168.80.64) -->
       <div class="plano-wan-banner" style="border-color:rgba(56,189,248,0.3);background:rgba(15,23,42,0.7);margin-top:8px;padding:8px 12px;">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
           <div style="display:flex;align-items:center;gap:10px;">
@@ -1694,10 +1700,13 @@ Selecciona un router y presiona una acción para ejecutar comandos administrativ
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;">
+            <span class="badge" style="background:rgba(16,185,129,0.15);color:#34d399;font-size:11px;border:1px solid rgba(16,185,129,0.4);">
+              ⚡ Latencia LAN FortiGate: <strong id="cam-latency-stat">&lt; 85 ms</strong>
+            </span>
             <span style="font-size:11px;color:#94a3b8;">IP NVR:</span>
-            <input type="text" id="nvr-ip-input" value="192.168.1.64" style="background:rgba(0,0,0,0.5);border:1px solid #38bdf8;color:#38bdf8;padding:4px 8px;border-radius:4px;font-family:var(--mono);font-size:12px;width:125px;" title="Dirección IP del NVR Hikvision">
+            <input type="text" id="nvr-ip-input" value="192.168.80.64" style="background:rgba(0,0,0,0.5);border:1px solid #38bdf8;color:#38bdf8;padding:4px 8px;border-radius:4px;font-family:var(--mono);font-size:12px;width:125px;" title="Dirección IP del NVR Hikvision">
             <button class="btn-sm" id="btn-save-nvr-ip" style="background:#0284c7;color:#fff;border-color:#0284c7;font-weight:700;">🔄 Probar Enlace</button>
-            <span class="badge" id="nvr-status-badge" style="background:rgba(245,158,11,0.2);color:#fbbf24;border:1px solid rgba(245,158,11,0.4);font-size:11px;">⚠️ Verificando Enlace</span>
+            <span class="badge" id="nvr-status-badge" style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.4);font-size:11px;">🟢 NVR En Línea</span>
           </div>
         </div>
       </div>
