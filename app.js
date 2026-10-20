@@ -586,10 +586,10 @@ function layoutLynchCluster(cx, cy, isBoth = false) {
     d.y = cy + Math.sin(a) * rWorkY;
   });
 
-  // TIER 2: Secondary Routers / Switches 192.168.80.x
+  // TIER 2: Secondary Routers / Switches de Lynch (incluyendo switches 192.168.80.x y router 192.168.3.1 de Portería)
   const mainRouters = state.devices.filter(d =>
     d.type === 'router' &&
-    d.ip.startsWith('192.168.80.') &&
+    getDeviceSede(d) === 'lynch' &&
     d.ip !== '192.168.80.1' &&
     (!isLive || d.status === 'online')
   );
@@ -604,12 +604,19 @@ function layoutLynchCluster(cx, cy, isBoth = false) {
     d.y = cy + Math.sin(a) * rRoutY;
   });
 
-  // TIER 3: Bridge satellites
-  const bridgeIps = [...new Set(state.devices.map(d => d.bridgeTo).filter(b => b && b.startsWith('192.168.80.') && b !== '192.168.80.1'))];
+  // TIER 3: Bridge satellites (Ramas dependientes de routers/switches en Lynch)
+  const lynchRouterIps = new Set([gw?.ip, ...mainRouters.map(r => r.ip)].filter(Boolean));
+  const bridgeIps = [...new Set(state.devices.map(d => d.bridgeTo).filter(b => b && lynchRouterIps.has(b) && b !== '192.168.80.1'))];
+
   bridgeIps.forEach(bridgeIp => {
     const parent = state.devices.find(d => d.ip === bridgeIp);
     if (!parent) return;
-    const children = state.devices.filter(d => d.bridgeTo === bridgeIp && !d.ip.startsWith('192.168.80.') && !d.ip.startsWith('192.168.1.') && !d.ip.startsWith('192.168.9.') && (!isLive || d.status === 'online'));
+    const children = state.devices.filter(d =>
+      d.bridgeTo === bridgeIp &&
+      getDeviceSede(d) === 'lynch' &&
+      d.ip !== bridgeIp &&
+      (!isLive || d.status === 'online')
+    );
     if (!children.length) return;
 
     const baseAngle = Math.atan2(parent.y - cy, parent.x - cx);
@@ -626,6 +633,21 @@ function layoutLynchCluster(cx, cy, isBoth = false) {
         c.y = parent.y + Math.sin(ca) * (dist * 0.88);
       }
     });
+  });
+
+  // Safe fallback: asegurar que NINGÚN dispositivo de Lynch quede sin coordenadas (NaN / 0 / undefined)
+  state.devices.forEach((d, idx) => {
+    if (getDeviceSede(d) === 'lynch') {
+      if (!Number.isFinite(d.x) || !Number.isFinite(d.y) || (d.x === 0 && d.y === 0 && d.ip !== '192.168.80.1')) {
+        let parent = d.bridgeTo ? state.devices.find(p => p.ip === d.bridgeTo) : null;
+        if (!parent || !Number.isFinite(parent.x)) parent = gw;
+        const px = parent && Number.isFinite(parent.x) ? parent.x : cx;
+        const py = parent && Number.isFinite(parent.y) ? parent.y : cy;
+        const fallbackAngle = (idx * 0.6) % (Math.PI * 2);
+        d.x = px + Math.cos(fallbackAngle) * 75;
+        d.y = py + Math.sin(fallbackAngle) * 75;
+      }
+    }
   });
 }
 
@@ -669,30 +691,58 @@ function isFiltered(d){
 
   // En Modo Tiempo Real (En Vivo), ocultar máquinas apagadas excepto Gateways y Switches principales
   const rootIp = getRootGatewayIp();
-  if (state.mapViewMode === 'live' && d.ip !== rootIp && d.ip !== '192.168.1.99' && d.ip !== '192.168.1.253' && d.ip !== '192.168.80.1') {
+  if (state.mapViewMode === 'live' && d.ip !== rootIp && d.ip !== '192.168.1.99' && d.ip !== '192.168.1.253' && d.ip !== '192.168.80.1' && d.ip !== '192.168.3.1' && d.ip !== '192.168.3.17') {
     if (d.status === 'offline') return true;
   }
+
+  const q = $('search-device')?.value.toLowerCase().trim() || '';
 
   // Check if device belongs to a collapsed parent router
   if (d.bridgeTo && d.bridgeTo !== rootIp && !d.ip.startsWith('192.168.80.') && !d.ip.startsWith('192.168.1.')) {
     const parent = state.devices.find(r => r.ip === d.bridgeTo);
     if (parent && parent.collapsed) {
-      const isAnimating = branchAnimations.some(a => a.device === d);
-      if (!isAnimating) return true;
+      // Si el usuario está buscando este dispositivo específicamente, no ocultarlo por colapso
+      const isSearched = q && (d.ip.includes(q) || d.name.toLowerCase().includes(q) || (d.schoolArea && d.schoolArea.toLowerCase().includes(q)));
+      if (isSearched) {
+        parent.collapsed = false;
+      } else {
+        const isAnimating = branchAnimations.some(a => a.device === d);
+        if (!isAnimating) return true;
+      }
     }
   }
   if(d.type==='router'&&!$('f-router')?.checked) return true;
   if(d.type==='pc'&&!$('f-pc')?.checked) return true;
   if(d.type==='printer'&&!$('f-printer')?.checked) return true;
   if((d.type==='unknown'||d.type==='server')&&!$('f-unknown')?.checked) return true;
-  const q=$('search-device')?.value.toLowerCase().trim()||'';
+
   if(q){
+    // Gateways troncales nunca se ocultan para mantener el contexto del mapa
+    if (d.ip === rootIp || d.ip === '192.168.80.1' || d.ip === '192.168.1.99' || d.ip === '192.168.1.253') return false;
+
+    // Coincidencia directa con este nodo
     const matchIp = d.ip.includes(q);
     const matchName = d.name.toLowerCase().includes(q);
     const matchArea = d.schoolArea && d.schoolArea.toLowerCase().includes(q);
     const matchMac = d.mac.toLowerCase().includes(q);
     const matchVendor = d.vendor && d.vendor.toLowerCase().includes(q);
-    if(!matchIp && !matchName && !matchArea && !matchMac && !matchVendor) return true;
+    if (matchIp || matchName || matchArea || matchMac || matchVendor) return false;
+
+    // Si este nodo es el router padre de un equipo que coincide con la búsqueda, mantenerlo visible y desplegado
+    const isParentOfMatch = state.devices.some(child => 
+      child.bridgeTo === d.ip && (
+        child.ip.includes(q) ||
+        child.name.toLowerCase().includes(q) ||
+        (child.schoolArea && child.schoolArea.toLowerCase().includes(q)) ||
+        child.mac.toLowerCase().includes(q)
+      )
+    );
+    if (isParentOfMatch) {
+      d.collapsed = false;
+      return false;
+    }
+
+    return true;
   }
   return false;
 }
@@ -1519,14 +1569,32 @@ function setupDeviceSearch() {
         const dev = state.devices.find(d => d.ip === ip);
         if (dev) {
           focusAndOpenDevice(dev);
-          dropdown.style.display = 'none';
         }
       });
     });
   }
 
   input.addEventListener('input', e => {
-    renderSearchResults(e.target.value);
+    const q = e.target.value.toLowerCase().trim();
+    renderSearchResults(q);
+
+    // Si el usuario escribe una IP completa o específica como 192.168.3.17, auto-desplegar la rama y enfocar
+    if (q.includes('.') && q.split('.').length >= 4) {
+      const exact = state.devices.find(d => d.ip === q);
+      if (exact) {
+        let curr = exact;
+        while (curr && curr.bridgeTo && curr.bridgeTo !== '192.168.80.1' && curr.bridgeTo !== '192.168.1.99') {
+          const parentRouter = state.devices.find(r => r.ip === curr.bridgeTo);
+          if (parentRouter) {
+            parentRouter.collapsed = false;
+            curr = parentRouter;
+          } else break;
+        }
+        if (!Number.isFinite(exact.x) || !Number.isFinite(exact.y) || (exact.x === 0 && exact.y === 0)) {
+          autoLayout();
+        }
+      }
+    }
   });
 
   input.addEventListener('focus', () => {
@@ -1547,7 +1615,6 @@ function setupDeviceSearch() {
       );
       if (match) {
         focusAndOpenDevice(match);
-        dropdown.style.display = 'none';
       } else {
         toast(`No se encontró ningún equipo coincidente con "${input.value}"`, 'warning');
       }
@@ -1583,37 +1650,62 @@ function focusAndOpenDevice(d) {
     state.currentView = 'map';
   }
 
-  // 2. Si el dispositivo pertenece a una rama colapsada, desplegarla
-  if (d.bridgeTo && d.bridgeTo !== '192.168.80.1') {
-    const parentRouter = state.devices.find(r => r.ip === d.bridgeTo);
-    if (parentRouter && parentRouter.collapsed) {
-      toggleRouterBranch(parentRouter, false);
+  // 2. Si la sede del dispositivo no coincide con la vista actual, alternar a la sede correspondiente
+  const devSede = getDeviceSede(d);
+  if (state.mapSedeView !== 'both' && state.mapSedeView !== devSede) {
+    switchMapSedeView(devSede);
+  }
+
+  // 3. Desplegar toda la jerarquía de routers padre para que el dispositivo sea 100% visible
+  let curr = d;
+  while (curr && curr.bridgeTo && curr.bridgeTo !== '192.168.80.1' && curr.bridgeTo !== '192.168.1.99') {
+    const parentRouter = state.devices.find(r => r.ip === curr.bridgeTo);
+    if (parentRouter) {
+      parentRouter.collapsed = false;
+      curr = parentRouter;
+    } else {
+      break;
     }
   }
 
-  // 3. Asegurar filtros de visualización
+  // 4. Asegurar filtros de visualización de tipo de dispositivo
   if (d.type === 'router' && $('f-router')) $('f-router').checked = true;
   if (d.type === 'pc' && $('f-pc')) $('f-pc').checked = true;
   if (d.type === 'printer' && $('f-printer')) $('f-printer').checked = true;
   if ((d.type === 'unknown' || d.type === 'server') && $('f-unknown')) $('f-unknown').checked = true;
 
-  // 4. Centrar y hacer zoom en el mapa hacia el nodo
+  // 5. Asegurar cálculo de coordenadas si no están listas
+  if (!Number.isFinite(d.x) || !Number.isFinite(d.y) || (d.x === 0 && d.y === 0 && d.ip !== '192.168.80.1' && d.ip !== '192.168.1.99')) {
+    autoLayout();
+  }
+
+  // 6. Limpiar el filtro de texto para que toda la red circundante sea visible con el nodo enfocado
+  const sInput = $('search-device');
+  if (sInput) {
+    sInput.value = '';
+    const clr = $('search-device-clear');
+    if (clr) clr.style.display = 'none';
+    const dd = $('search-results-dropdown');
+    if (dd) dd.style.display = 'none';
+  }
+
+  // 7. Centrar suavemente y hacer zoom en el mapa hacia el nodo
   const targetZoom = 1.35;
   state.mapZoom = targetZoom;
-  $('zoom-label').textContent = Math.round(state.mapZoom * 100) + '%';
+  if ($('zoom-label')) $('zoom-label').textContent = Math.round(state.mapZoom * 100) + '%';
   state.mapOffX = (canvas.width / 2) - (d.x * targetZoom);
   state.mapOffY = (canvas.height / 2) - (d.y * targetZoom);
 
-  // 5. Ondas de choque (Ripples) intensas sobre el nodo
+  // 8. Ondas de choque (Ripples) intensas sobre el nodo
   triggerRipple(d.x, d.y, '#00f5ff');
   setTimeout(() => triggerRipple(d.x, d.y, '#f59e0b'), 140);
   setTimeout(() => triggerRipple(d.x, d.y, '#10b981'), 280);
 
-  // 6. Seleccionar y abrir Ficha de Detalles (Popup)
+  // 9. Seleccionar y abrir Ficha de Detalles (Popup)
   state.selectedNode = d;
   showNodePopup(d);
 
-  toast(`🎯 Dispositivo ubicado: ${d.schoolArea || d.name} (${d.ip})`, 'success');
+  toast(`🎯 Dispositivo ubicado en el mapa: ${d.schoolArea || d.name} (${d.ip})`, 'success');
 }
 
 // ── Node Popup ──
