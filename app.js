@@ -6389,7 +6389,7 @@ async function renderCamerasDashboard() {
     camerasDataCache = data.cameras || [];
     const nvr = data.nvr_config || {};
 
-    // Sincronizar barra NVR
+    // Sincronizar barra NVR Lynch
     const nvrInput = $('nvr-ip-input');
     if (nvrInput && !nvrInput.matches(':focus')) {
       nvrInput.value = nvr.ip || '192.168.80.64';
@@ -6409,18 +6409,49 @@ async function renderCamerasDashboard() {
       }
     }
 
-    // Actualizar KPIs
-    const onlineCount = camerasDataCache.filter(c => c.status === 'online').length;
-    const stOnline = $('cam-stat-online');
-    if (stOnline) stOnline.textContent = `${onlineCount} / ${camerasDataCache.length} Operativas`;
+    // Sincronizar barra NVR Levarte
+    const levNvr = data.levarte_nvr_config || {};
+    const levInput = $('levarte-nvr-ip-input');
+    if (levInput && !levInput.matches(':focus')) {
+      levInput.value = levNvr.ip || '192.168.1.64';
+    }
+    const levBadge = $('levarte-nvr-status-badge');
+    if (levBadge) {
+      if (levNvr.status === 'online') {
+        levBadge.style.background = 'rgba(16,185,129,0.2)';
+        levBadge.style.color = '#34d399';
+        levBadge.style.borderColor = 'rgba(16,185,129,0.4)';
+        levBadge.innerHTML = '🟢 Levarte En Línea';
+      } else {
+        levBadge.style.background = 'rgba(245,158,11,0.2)';
+        levBadge.style.color = '#fbbf24';
+        levBadge.style.borderColor = 'rgba(245,158,11,0.4)';
+        levBadge.innerHTML = '⚠️ Verificando Puente';
+      }
+    }
 
     const filtered = camerasDataCache.filter(c => {
       if (camerasSedeFilter === 'all') return true;
       return c.sede === camerasSedeFilter;
     });
 
+    // Actualizar KPIs adaptados al filtro activo
+    const filteredOnline = filtered.filter(c => c.status === 'online').length;
+    const stOnline = $('cam-stat-online');
+    if (stOnline) {
+      if (camerasSedeFilter === 'all') {
+        stOnline.textContent = `${filteredOnline} / ${filtered.length} (Lynch: 4, Levarte: 8)`;
+      } else if (camerasSedeFilter === 'levarte') {
+        stOnline.textContent = `${filteredOnline} / ${filtered.length} (Sede Levarte)`;
+      } else {
+        stOnline.textContent = `${filteredOnline} / ${filtered.length} (Sede Lynch)`;
+      }
+    }
+
     if (camerasLayoutMode === 'focus') {
       container.className = 'cameras-grid-focus';
+    } else if (camerasSedeFilter === 'all') {
+      container.className = 'cameras-grid-all';
     } else {
       container.className = 'cameras-grid-2x2';
     }
@@ -6693,16 +6724,16 @@ function initCamerasModule() {
     });
   });
 
-  // Botón Probar / Guardar Enlace NVR
+  // Botón Probar / Guardar Enlace NVR Lynch
   $('btn-save-nvr-ip')?.addEventListener('click', async () => {
     const ipVal = $('nvr-ip-input')?.value.trim();
     if (!ipVal) return;
-    toast(`Probando enlace de red con NVR Hikvision en ${ipVal}...`, 'info');
+    toast(`Probando enlace de red con NVR Hikvision Lynch en ${ipVal}...`, 'info');
     try {
       const res = await fetch('/api/cameras/nvr-config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ip: ipVal })
+        body: JSON.stringify({ ip: ipVal, sede: 'lynch' })
       });
       if (res.ok) {
         const d = await res.json();
@@ -6710,7 +6741,28 @@ function initCamerasModule() {
         renderCamerasDashboard();
       }
     } catch (e) {
-      toast('Error al comunicar con NVR: ' + e.message, 'error');
+      toast('Error al comunicar con NVR Lynch: ' + e.message, 'error');
+    }
+  });
+
+  // Botón Probar / Guardar Enlace NVR Levarte
+  $('btn-save-levarte-nvr-ip')?.addEventListener('click', async () => {
+    const ipVal = $('levarte-nvr-ip-input')?.value.trim();
+    if (!ipVal) return;
+    toast(`Probando enlace inter-sede hacia CCTV Levarte en ${ipVal}...`, 'info');
+    try {
+      const res = await fetch('/api/cameras/nvr-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ip: ipVal, sede: 'levarte' })
+      });
+      if (res.ok) {
+        const d = await res.json();
+        toast(d.message, d.is_alive ? 'success' : 'warning');
+        renderCamerasDashboard();
+      }
+    } catch (e) {
+      toast('Error al comunicar con Levarte: ' + e.message, 'error');
     }
   });
 

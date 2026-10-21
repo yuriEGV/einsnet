@@ -1671,11 +1671,11 @@ Selecciona un router y presiona una acción para ejecutar comandos administrativ
         <div class="view-controls">
           <div class="map-mode-segmented" id="cameras-sede-filter">
             <button class="seg-btn active" data-cam-sede="lynch">🏫 Sede Lynch (4 Cams NVR)</button>
-            <button class="seg-btn" data-cam-sede="levarte">📍 Sede Levarte (4 Cams)</button>
-            <button class="seg-btn" data-cam-sede="all">🌐 Todas (8 Cams)</button>
+            <button class="seg-btn" data-cam-sede="levarte">📍 Sede Levarte (8 Cams NVR)</button>
+            <button class="seg-btn" data-cam-sede="all">🌐 Ambas Sedes (12 Cams)</button>
           </div>
           <div class="map-mode-segmented" id="cameras-layout-filter" style="margin-left:4px;">
-            <button class="seg-btn active" data-cam-layout="grid" title="Mosaico Multicámara">🔲 Mosaico 2x2</button>
+            <button class="seg-btn active" data-cam-layout="grid" title="Mosaico Multicámara">🔲 Mosaico</button>
             <button class="seg-btn" data-cam-layout="focus" title="Cámara Seleccionada con Joystick PTZ">🔳 Detalle PTZ</button>
           </div>
           <!-- Selector de Modo de Latencia / Streaming -->
@@ -1689,7 +1689,7 @@ Selecciona un router y presiona una acción para ejecutar comandos administrativ
         </div>
       </div>
 
-      <!-- Barra de Estado y Enlace NVR Hikvision (192.168.80.64) -->
+      <!-- Barra de Estado y Enlace NVR Hikvision (Sede Lynch - 192.168.80.64) -->
       <div class="plano-wan-banner" style="border-color:rgba(56,189,248,0.3);background:rgba(15,23,42,0.7);margin-top:8px;padding:8px 12px;">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
           <div style="display:flex;align-items:center;gap:10px;">
@@ -1704,9 +1704,31 @@ Selecciona un router y presiona una acción para ejecutar comandos administrativ
               ⚡ Latencia LAN FortiGate: <strong id="cam-latency-stat">&lt; 85 ms</strong>
             </span>
             <span style="font-size:11px;color:#94a3b8;">IP NVR:</span>
-            <input type="text" id="nvr-ip-input" value="192.168.80.64" style="background:rgba(0,0,0,0.5);border:1px solid #38bdf8;color:#38bdf8;padding:4px 8px;border-radius:4px;font-family:var(--mono);font-size:12px;width:125px;" title="Dirección IP del NVR Hikvision">
+            <input type="text" id="nvr-ip-input" value="192.168.80.64" style="background:rgba(0,0,0,0.5);border:1px solid #38bdf8;color:#38bdf8;padding:4px 8px;border-radius:4px;font-family:var(--mono);font-size:12px;width:125px;" title="Dirección IP del NVR Hikvision Sede Lynch">
             <button class="btn-sm" id="btn-save-nvr-ip" style="background:#0284c7;color:#fff;border-color:#0284c7;font-weight:700;">🔄 Probar Enlace</button>
             <span class="badge" id="nvr-status-badge" style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.4);font-size:11px;">🟢 NVR En Línea</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Barra de Estado y Enlace NVR / Gateway CCTV (Sede Levarte - 192.168.1.64 / 192.168.1.99) -->
+      <div class="plano-wan-banner" style="border-color:rgba(168,85,247,0.35);background:rgba(15,23,42,0.7);margin-top:6px;padding:8px 12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:20px;">📍</span>
+            <div style="font-size:12px;">
+              <strong style="color:#c084fc;">NVR 8 Canales Sede Levarte (Módulo A-15):</strong>
+              <span style="color:#cbd5e1;margin-left:6px;">Gateway VPN: <code>192.168.1.99</code> · Canales 1 al 8 (ISAPI / RTSP 554)</span>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="badge" style="background:rgba(168,85,247,0.18);color:#c084fc;font-size:11px;border:1px solid rgba(168,85,247,0.4);">
+              🌐 Puente Inter-Sedes
+            </span>
+            <span style="font-size:11px;color:#94a3b8;">IP NVR Levarte:</span>
+            <input type="text" id="levarte-nvr-ip-input" value="192.168.1.64" style="background:rgba(0,0,0,0.5);border:1px solid #c084fc;color:#c084fc;padding:4px 8px;border-radius:4px;font-family:var(--mono);font-size:12px;width:125px;" title="Dirección IP del NVR Hikvision o Cámara Central en Sede Levarte">
+            <button class="btn-sm" id="btn-save-levarte-nvr-ip" style="background:#7c3aed;color:#fff;border-color:#7c3aed;font-weight:700;">🔄 Probar Enlace Levarte</button>
+            <span class="badge" id="levarte-nvr-status-badge" style="background:rgba(148,163,184,0.15);color:#cbd5e1;border:1px solid rgba(148,163,184,0.3);font-size:11px;">🔍 Verificando Puente</span>
           </div>
         </div>
       </div>
@@ -1723,7 +1745,7 @@ Selecciona un router y presiona una acción para ejecutar comandos administrativ
           </div>
           <div style="display:flex;align-items:center;gap:8px;">
             <span class="badge" style="background:rgba(2,132,199,0.18);color:#38bdf8;font-size:11px;border:1px solid rgba(2,132,199,0.4);">
-              🔒 ONVIF Auth: <code style="color:#a78bfa;">qwert</code> / ●●●●● (Protegida)
+              🔒 ONVIF Auth: <code style="color:#a78bfa;">admin</code> / ●●●●● (Protegida)
             </span>
             <span class="badge badge-success" style="font-size:11px;">
               <span class="pulse-green-dot"></span> EN VIVO

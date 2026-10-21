@@ -1249,6 +1249,21 @@ NVR_CONFIG = {
     "last_check": None
 }
 
+# Configuración del NVR / CCTV Hikvision (Sede Levarte · Módulo A-15)
+LEVARTE_NVR_CONFIG = {
+    "ip": "192.168.1.64",
+    "gateway": "192.168.1.99",
+    "mac": "BC:54:51:55:12:00",
+    "http_port": 80,
+    "rtsp_port": 554,
+    "server_port": 8000,
+    "channels": 8,
+    "status": "standby",
+    "last_check": None
+}
+
+LEVARTE_OFFLINE_CACHE = {}
+
 CAMERAS_CATALOG = {
     # ── 4 CÁMARAS SEDE LYNCH (CENTRALIZADAS EN NVR CANALES 1 AL 4) ──
     "cam-lynch-1": {
@@ -1356,13 +1371,13 @@ CAMERAS_CATALOG = {
         "rtsp_substream": "rtsp://admin:qwert12345%2F@192.168.80.64:554/Streaming/Channels/402"
     },
 
-    # ── 4 CÁMARAS SEDE LEVARTE (MÓDULO A-15) ──
+    # ── 8 CÁMARAS SEDE LEVARTE (MÓDULO A-15 · NVR 8 CANALES) ──
     "cam-levarte-1": {
         "id": "cam-levarte-1",
         "ip": "192.168.1.126",
         "channel": 1,
         "channel_code": "101",
-        "name": "Cam 01 - Acceso Calle Levarte",
+        "name": "Cam 01 - Acceso Calle Levarte (Portón Frontal)",
         "sede": "levarte",
         "area": "CCTV Seguridad / Acceso Calle Levarte (Portón Frontal)",
         "model": "Hikvision DarkFighter Bullet DS-2CD2T46G2-ISU",
@@ -1371,7 +1386,7 @@ CAMERAS_CATALOG = {
         "ir_capable": True,
         "resolution": "1080p FHD (1920x1080)",
         "fps": 30,
-        "bitrate": "3800 Kbps",
+        "bitrate": "4096 Kbps",
         "vlan": 30,
         "mac": "BC:54:51:55:12:26",
         "mode": "day",
@@ -1380,15 +1395,15 @@ CAMERAS_CATALOG = {
         "motion_detected": False,
         "ports": [80, 554, 8000],
         "preset": "P1 - Portón Frontal",
-        "rtsp_stream": "rtsp://192.168.1.126:554/Streaming/Channels/101",
-        "rtsp_substream": "rtsp://192.168.1.126:554/Streaming/Channels/102"
+        "rtsp_stream": "rtsp://admin:qwert12345%2F@192.168.1.64:554/Streaming/Channels/101",
+        "rtsp_substream": "rtsp://admin:qwert12345%2F@192.168.1.64:554/Streaming/Channels/102"
     },
     "cam-levarte-2": {
         "id": "cam-levarte-2",
         "ip": "192.168.9.50",
         "channel": 2,
-        "channel_code": "101",
-        "name": "Cam 02 - Domo Patio Interior",
+        "channel_code": "201",
+        "name": "Cam 02 - Domo Patio Interior Central",
         "sede": "levarte",
         "area": "CCTV Seguridad / Domo Patio Interior Levarte",
         "model": "Hikvision Mini Dome DS-2CD2143G2-I",
@@ -1406,15 +1421,15 @@ CAMERAS_CATALOG = {
         "motion_detected": False,
         "ports": [80, 554, 8000],
         "preset": "P2 - Patio Central",
-        "rtsp_stream": "rtsp://192.168.9.50:554/Streaming/Channels/101",
-        "rtsp_substream": "rtsp://192.168.9.50:554/Streaming/Channels/102"
+        "rtsp_stream": "rtsp://admin:qwert12345%2F@192.168.1.64:554/Streaming/Channels/201",
+        "rtsp_substream": "rtsp://admin:qwert12345%2F@192.168.1.64:554/Streaming/Channels/202"
     },
     "cam-levarte-3": {
         "id": "cam-levarte-3",
         "ip": "192.168.1.127",
         "channel": 3,
-        "channel_code": "101",
-        "name": "Cam 03 - Pasillo Central Aulas",
+        "channel_code": "301",
+        "name": "Cam 03 - Pasillo Central Aulas (1° y 2° Medio)",
         "sede": "levarte",
         "area": "Pabellón Aulas Módulo A-15 / Pasillo 1° y 2° Medio",
         "model": "Hikvision Dome DS-2CD2123G0-I",
@@ -1432,15 +1447,15 @@ CAMERAS_CATALOG = {
         "motion_detected": False,
         "ports": [80, 554, 8000],
         "preset": "P3 - Pasillo Aulas",
-        "rtsp_stream": "rtsp://192.168.1.127:554/Streaming/Channels/101",
-        "rtsp_substream": "rtsp://192.168.1.127:554/Streaming/Channels/102"
+        "rtsp_stream": "rtsp://admin:qwert12345%2F@192.168.1.64:554/Streaming/Channels/301",
+        "rtsp_substream": "rtsp://admin:qwert12345%2F@192.168.1.64:554/Streaming/Channels/302"
     },
     "cam-levarte-4": {
         "id": "cam-levarte-4",
         "ip": "192.168.9.51",
         "channel": 4,
-        "channel_code": "101",
-        "name": "Cam 04 - Multicancha Deportiva",
+        "channel_code": "401",
+        "name": "Cam 04 - Multicancha Deportiva Techada",
         "sede": "levarte",
         "area": "Zona Deportiva y Recreación Techada Levarte",
         "model": "Hikvision Bullet DS-2CD2043G2-I",
@@ -1458,8 +1473,112 @@ CAMERAS_CATALOG = {
         "motion_detected": False,
         "ports": [80, 554, 8000],
         "preset": "P4 - Multicancha",
-        "rtsp_stream": "rtsp://192.168.9.51:554/Streaming/Channels/101",
-        "rtsp_substream": "rtsp://192.168.9.51:554/Streaming/Channels/102"
+        "rtsp_stream": "rtsp://admin:qwert12345%2F@192.168.1.64:554/Streaming/Channels/401",
+        "rtsp_substream": "rtsp://admin:qwert12345%2F@192.168.1.64:554/Streaming/Channels/402"
+    },
+    "cam-levarte-5": {
+        "id": "cam-levarte-5",
+        "ip": "192.168.1.128",
+        "channel": 5,
+        "channel_code": "501",
+        "name": "Cam 05 - Comedor & Casino Keuken Levarte",
+        "sede": "levarte",
+        "area": "Casino de Alumnos / Sector Keuken & Cocina (Sede Levarte)",
+        "model": "Hikvision Dome DS-2CD2143G2-I",
+        "type": "dome",
+        "ptz_capable": True,
+        "ir_capable": True,
+        "resolution": "1080p FHD (1920x1080)",
+        "fps": 30,
+        "bitrate": "4096 Kbps",
+        "vlan": 30,
+        "mac": "BC:54:51:55:12:28",
+        "mode": "day",
+        "ptz": {"pan": 0, "tilt": 0, "zoom": 1.0},
+        "recording": True,
+        "motion_detected": False,
+        "ports": [80, 554, 8000],
+        "preset": "P5 - Comedor Casino",
+        "rtsp_stream": "rtsp://admin:qwert12345%2F@192.168.1.64:554/Streaming/Channels/501",
+        "rtsp_substream": "rtsp://admin:qwert12345%2F@192.168.1.64:554/Streaming/Channels/502"
+    },
+    "cam-levarte-6": {
+        "id": "cam-levarte-6",
+        "ip": "192.168.9.52",
+        "channel": 6,
+        "channel_code": "601",
+        "name": "Cam 06 - Acceso Pabellón Talleres Técnicos",
+        "sede": "levarte",
+        "area": "Pabellón Talleres / Acceso Taller Bajo Nivel y Polifuncional",
+        "model": "Hikvision Bullet DS-2CD2043G2-I",
+        "type": "bullet",
+        "ptz_capable": True,
+        "ir_capable": True,
+        "resolution": "1080p FHD (1920x1080)",
+        "fps": 30,
+        "bitrate": "4096 Kbps",
+        "vlan": 30,
+        "mac": "BC:54:51:99:09:52",
+        "mode": "day",
+        "ptz": {"pan": 5, "tilt": -5, "zoom": 1.0},
+        "recording": True,
+        "motion_detected": False,
+        "ports": [80, 554, 8000],
+        "preset": "P6 - Acceso Talleres",
+        "rtsp_stream": "rtsp://admin:qwert12345%2F@192.168.1.64:554/Streaming/Channels/601",
+        "rtsp_substream": "rtsp://admin:qwert12345%2F@192.168.1.64:554/Streaming/Channels/602"
+    },
+    "cam-levarte-7": {
+        "id": "cam-levarte-7",
+        "ip": "192.168.1.129",
+        "channel": 7,
+        "channel_code": "701",
+        "name": "Cam 07 - Pasillo Inspectoría General & Secretaría",
+        "sede": "levarte",
+        "area": "Sector Administrativo / Inspectoría General y Secretaría",
+        "model": "Hikvision Dome DS-2CD2123G0-I",
+        "type": "dome",
+        "ptz_capable": True,
+        "ir_capable": True,
+        "resolution": "1080p FHD (1920x1080)",
+        "fps": 30,
+        "bitrate": "3800 Kbps",
+        "vlan": 30,
+        "mac": "BC:54:51:55:12:29",
+        "mode": "day",
+        "ptz": {"pan": 0, "tilt": 0, "zoom": 1.0},
+        "recording": True,
+        "motion_detected": False,
+        "ports": [80, 554, 8000],
+        "preset": "P7 - Pasillo Inspectoría",
+        "rtsp_stream": "rtsp://admin:qwert12345%2F@192.168.1.64:554/Streaming/Channels/701",
+        "rtsp_substream": "rtsp://admin:qwert12345%2F@192.168.1.64:554/Streaming/Channels/702"
+    },
+    "cam-levarte-8": {
+        "id": "cam-levarte-8",
+        "ip": "192.168.9.53",
+        "channel": 8,
+        "channel_code": "801",
+        "name": "Cam 08 - Perímetro Posterior & Estacionamiento",
+        "sede": "levarte",
+        "area": "Perímetro Trasero / Portón Estacionamiento Docente y Salida Emergencia",
+        "model": "Hikvision DarkFighter Bullet DS-2CD2T46G2-ISU",
+        "type": "bullet",
+        "ptz_capable": True,
+        "ir_capable": True,
+        "resolution": "1080p FHD (1920x1080)",
+        "fps": 30,
+        "bitrate": "4096 Kbps",
+        "vlan": 30,
+        "mac": "BC:54:51:99:09:53",
+        "mode": "day",
+        "ptz": {"pan": -15, "tilt": -5, "zoom": 1.1},
+        "recording": True,
+        "motion_detected": False,
+        "ports": [80, 554, 8000],
+        "preset": "P8 - Portón Estacionamiento",
+        "rtsp_stream": "rtsp://admin:qwert12345%2F@192.168.1.64:554/Streaming/Channels/801",
+        "rtsp_substream": "rtsp://admin:qwert12345%2F@192.168.1.64:554/Streaming/Channels/802"
     }
 }
 
@@ -1481,6 +1600,7 @@ def fetch_real_camera_snapshot(target_key_or_ip, prefer_substream=False):
     """
     Obtiene captura de vídeo en tiempo real directamente del NVR con latencia ultra baja (<90ms).
     Utiliza sesión HTTP persistente Keep-Alive para eliminar sobrecarga de conexión.
+    Soporta multi-sede transparente (Lynch y Levarte).
     """
     now_t = time.time()
     # Cache ultracorto (150ms) solo para deduplicar peticiones simultáneas, garantizando tiempo real
@@ -1498,9 +1618,7 @@ def fetch_real_camera_snapshot(target_key_or_ip, prefer_substream=False):
     if not cam:
         return None, None
 
-    # Determinar si es NVR (Lynch) o cámara individual (Levarte)
-    is_nvr = (cam.get("sede") == "lynch")
-    target_ip = NVR_CONFIG["ip"] if is_nvr else cam.get("ip")
+    is_lynch = (cam.get("sede") == "lynch")
     ch_num = cam.get("channel", 1)
     ch_code = f"{ch_num}02" if prefer_substream else cam.get("channel_code", f"{ch_num}01")
 
@@ -1508,29 +1626,50 @@ def fetch_real_camera_snapshot(target_key_or_ip, prefer_substream=False):
     pwd = CAMERA_CREDS.get("password", "qwert12345/")
     auth = NVR_DIGEST_AUTH if (NVR_DIGEST_AUTH and getattr(NVR_DIGEST_AUTH, 'username', None) == user and getattr(NVR_DIGEST_AUTH, 'password', None) == pwd) else HTTPDigestAuth(user, pwd)
 
-    # Endpoints reales de captura para Hikvision NVR y Cámaras IP
     endpoints = []
-    if is_nvr:
+    if is_lynch:
+        target_ip = NVR_CONFIG["ip"]
         endpoints.append(f"http://{target_ip}:{NVR_CONFIG['http_port']}/ISAPI/Streaming/channels/{ch_code}/picture")
         if prefer_substream:
             endpoints.append(f"http://{target_ip}:{NVR_CONFIG['http_port']}/ISAPI/Streaming/channels/{ch_num}01/picture")
         endpoints.append(f"http://{target_ip}:{NVR_CONFIG['http_port']}/onvif-http/snapshot?channel={ch_num}&subtype=0")
     else:
-        endpoints.extend([
-            f"http://{target_ip}/ISAPI/Streaming/channels/101/picture",
-            f"http://{target_ip}/onvif-http/snapshot?channel=1&subtype=0",
-        ])
+        # Sede Levarte (Módulo A-15): Probar NVR Levarte y cámara individual
+        lev_nvr = LEVARTE_NVR_CONFIG["ip"]
+        cam_ip = cam.get("ip", lev_nvr)
+        # Solo intentar si no ha fallado en los últimos 4 segundos para mantener fluidez
+        if now_t - LEVARTE_OFFLINE_CACHE.get(lev_nvr, 0) > 4.0:
+            endpoints.append(f"http://{lev_nvr}:{LEVARTE_NVR_CONFIG['http_port']}/ISAPI/Streaming/channels/{ch_code}/picture")
+            if prefer_substream:
+                endpoints.append(f"http://{lev_nvr}:{LEVARTE_NVR_CONFIG['http_port']}/ISAPI/Streaming/channels/{ch_num}01/picture")
+            endpoints.append(f"http://{lev_nvr}:{LEVARTE_NVR_CONFIG['http_port']}/onvif-http/snapshot?channel={ch_num}&subtype=0")
+            # Soporte para Servidor / Nodo EinsNet activo en Levarte (Relay en puerto 8000)
+            endpoints.append(f"http://{lev_nvr}:8000/api/cameras/snapshot?ip={target_key_or_ip}&relay=1")
+            endpoints.append(f"http://192.168.1.131:8000/api/cameras/snapshot?ip={target_key_or_ip}&relay=1")
+            endpoints.append(f"http://192.168.1.130:8000/api/cameras/snapshot?ip={target_key_or_ip}&relay=1")
+        if cam_ip and cam_ip != lev_nvr and (now_t - LEVARTE_OFFLINE_CACHE.get(cam_ip, 0) > 4.0):
+            endpoints.append(f"http://{cam_ip}/ISAPI/Streaming/channels/101/picture")
+            endpoints.append(f"http://{cam_ip}/onvif-http/snapshot?channel=1&subtype=0")
 
     session = NVR_HTTP_SESSION if NVR_HTTP_SESSION is not None else requests
     for url in endpoints:
         try:
             r = session.get(url, auth=auth, timeout=0.6, headers={"User-Agent": "EinsNet-CCTV/5.0"})
             if r.status_code == 200 and len(r.content) > 500 and (r.content.startswith(b'\xff\xd8') or b'JFIF' in r.content[:30] or b'PNG' in r.content[:10]):
-                NVR_CONFIG["status"] = "online"
+                if is_lynch:
+                    NVR_CONFIG["status"] = "online"
+                else:
+                    LEVARTE_NVR_CONFIG["status"] = "online"
+                    LEVARTE_OFFLINE_CACHE.pop(LEVARTE_NVR_CONFIG["ip"], None)
                 CCTV_SNAPSHOT_CACHE[target_key_or_ip] = (now_t, r.content, "image/jpeg")
                 return r.content, "image/jpeg"
         except Exception:
             pass
+
+    if not is_lynch:
+        LEVARTE_OFFLINE_CACHE[LEVARTE_NVR_CONFIG["ip"]] = now_t
+        if cam.get("ip"):
+            LEVARTE_OFFLINE_CACHE[cam.get("ip")] = now_t
 
     return None, None
 
@@ -1555,29 +1694,57 @@ def generate_camera_snapshot_svg(target_key_or_ip):
     zoom = cam.get("ptz", {}).get("zoom", 1.0)
     is_rec = cam.get("recording", True)
     is_lynch = (cam.get("sede") == "lynch")
-    nvr_ip = NVR_CONFIG["ip"] if is_lynch else cam.get("ip")
-    ch_label = f"NVR CANAL {cam.get('channel', 1)}" if is_lynch else "CÁMARA IP DIRECTA"
 
-    if NVR_CONFIG["status"] == "online":
-        box_stroke = "rgba(16, 185, 129, 0.5)"
-        status_dot = "#10b981"
-        status_text = "NVR CONECTADO (LAN)"
-        title_text = "🟢 NVR HIKVISION EN LÍNEA · ENLACE LOCAL ACTIVO"
-        msg_title = "📡 ENLACE RTSP / ONVIF DISPONIBLE (PUERTO 554)"
-        msg_sub = f"Flujo H.264: rtsp://qwert:12345@{nvr_ip}:554/Streaming/Channels/{cam.get('channel_code', '101')}"
-        msg_box_bg = "rgba(16, 185, 129, 0.12)"
-        msg_box_stroke = "rgba(16, 185, 129, 0.3)"
-        msg_title_color = "#34d399"
+    user = CAMERA_CREDS.get("user", "admin")
+
+    if is_lynch:
+        nvr_ip = NVR_CONFIG["ip"]
+        ch_label = f"NVR CANAL {cam.get('channel', 1)}"
+        if NVR_CONFIG["status"] == "online":
+            box_stroke = "rgba(16, 185, 129, 0.5)"
+            status_dot = "#10b981"
+            status_text = "NVR CONECTADO (LAN)"
+            title_text = "🟢 NVR HIKVISION EN LÍNEA · ENLACE LOCAL ACTIVO"
+            msg_title = "📡 ENLACE RTSP / ONVIF DISPONIBLE (PUERTO 554)"
+            msg_sub = f"Flujo H.264: rtsp://{user}:qwert12345%2F@{nvr_ip}:554/Streaming/Channels/{cam.get('channel_code', '101')}"
+            msg_box_bg = "rgba(16, 185, 129, 0.12)"
+            msg_box_stroke = "rgba(16, 185, 129, 0.3)"
+            msg_title_color = "#34d399"
+        else:
+            box_stroke = "rgba(245, 158, 11, 0.4)"
+            status_dot = "#f59e0b"
+            status_text = "CONECTANDO NVR"
+            title_text = "📡 ENLACE HIKVISION NVR / ONVIF EN CURSO"
+            msg_title = "⚠️ ENRUTAMIENTO LOCAL REQUERIDO"
+            msg_sub = f"IP NVR: {nvr_ip} | Verifique cable de red o Gateway"
+            msg_box_bg = "rgba(239, 68, 68, 0.12)"
+            msg_box_stroke = "rgba(239, 68, 68, 0.3)"
+            msg_title_color = "#f87171"
     else:
-        box_stroke = "rgba(245, 158, 11, 0.4)"
-        status_dot = "#f59e0b"
-        status_text = "CONECTANDO NVR"
-        title_text = "📡 ENLACE HIKVISION NVR / ONVIF EN CURSO"
-        msg_title = "⚠️ ENRUTAMIENTO LOCAL REQUERIDO"
-        msg_sub = f"IP NVR: {nvr_ip} | Verifique cable de red o Gateway"
-        msg_box_bg = "rgba(239, 68, 68, 0.12)"
-        msg_box_stroke = "rgba(239, 68, 68, 0.3)"
-        msg_title_color = "#f87171"
+        # Sede Levarte (Módulo A-15)
+        nvr_ip = LEVARTE_NVR_CONFIG["ip"]
+        gw_ip = LEVARTE_NVR_CONFIG.get("gateway", "192.168.1.99")
+        ch_label = f"LEVARTE CANAL {cam.get('channel', 1)}"
+        if LEVARTE_NVR_CONFIG["status"] == "online":
+            box_stroke = "rgba(16, 185, 129, 0.5)"
+            status_dot = "#10b981"
+            status_text = "LEVARTE CONECTADO (PUENTE)"
+            title_text = "🟢 CCTV LEVARTE EN LÍNEA · ENLACE INTER-SEDES ACTIVO"
+            msg_title = "📡 SEÑAL RTSP / ONVIF TRANSMITIENDO VÍA PUENTE"
+            msg_sub = f"Flujo H.264: rtsp://{user}:qwert12345%2F@{nvr_ip}:554/Streaming/Channels/{cam.get('channel_code', '101')}"
+            msg_box_bg = "rgba(16, 185, 129, 0.12)"
+            msg_box_stroke = "rgba(16, 185, 129, 0.3)"
+            msg_title_color = "#34d399"
+        else:
+            box_stroke = "rgba(56, 189, 248, 0.45)"
+            status_dot = "#38bdf8"
+            status_text = "PUENTE INTER-SEDES"
+            title_text = "🏢 SEDE LEVARTE (MÓDULO A-15) · CÁMARA CONFIGURADA"
+            msg_title = "🔄 VERIFICANDO PUENTE INTER-SEDES (LYNCH ↔ LEVARTE)"
+            msg_sub = f"IP Destino: {nvr_ip} (Cámara: {cam.get('ip')}) | Gateway Fortinet: {gw_ip}"
+            msg_box_bg = "rgba(56, 189, 248, 0.10)"
+            msg_box_stroke = "rgba(56, 189, 248, 0.3)"
+            msg_title_color = "#38bdf8"
 
     svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="100%" height="100%">
   <rect width="640" height="360" fill="#060c18"/>
@@ -1591,16 +1758,16 @@ def generate_camera_snapshot_svg(target_key_or_ip):
   <!-- Cabecera OSD Superior -->
   <rect x="0" y="0" width="640" height="30" fill="rgba(0,0,0,0.85)"/>
   <circle cx="16" cy="15" r="5" fill="{status_dot}"/>
-  <text x="28" y="19" fill="{status_dot}" font-family="monospace" font-size="11" font-weight="bold">{status_text}</text>
-  <text x="175" y="19" fill="#38bdf8" font-family="monospace" font-size="11" font-weight="bold">[{cam.get('sede','lynch').upper()}] {cam.get('name')} · {ch_label}</text>
-  <text x="490" y="19" fill="#94a3b8" font-family="monospace" font-size="11">{now_str}</text>
+  <text x="28" y="19" fill="{status_dot}" font-family="monospace" font-size="10" font-weight="bold">{status_text}</text>
+  <text x="165" y="19" fill="#38bdf8" font-family="monospace" font-size="10" font-weight="bold">[{cam.get('sede','lynch').upper()}] {cam.get('name')[:30]} · {ch_label}</text>
+  <text x="500" y="19" fill="#94a3b8" font-family="monospace" font-size="10">{now_str}</text>
 
   <!-- Contenido Central Diagnóstico de Hardware -->
   <text x="320" y="102" fill="#38bdf8" font-family="system-ui, sans-serif" font-size="14" font-weight="bold" text-anchor="middle">{title_text}</text>
   
-  <text x="320" y="130" fill="#e2e8f0" font-family="monospace" font-size="12" text-anchor="middle">IP NVR Físico: <tspan fill="#38bdf8" font-weight="bold">{nvr_ip}</tspan> · Puertos: <tspan fill="#34d399">80 HTTP / 554 RTSP / 8000 SDK</tspan></text>
-  <text x="320" y="152" fill="#94a3b8" font-family="monospace" font-size="11" text-anchor="middle">Canal NVR: Ch {cam.get('channel', 1)} (Stream {cam.get('channel_code', '101')}) · MAC: {cam.get('mac')}</text>
-  <text x="320" y="174" fill="#a78bfa" font-family="monospace" font-size="11" text-anchor="middle">Autenticación ONVIF: qwert / &#x25cf;&#x25cf;&#x25cf;&#x25cf;&#x25cf; (Guardada en Bóveda)</text>
+  <text x="320" y="130" fill="#e2e8f0" font-family="monospace" font-size="12" text-anchor="middle">IP Físico/NVR: <tspan fill="#38bdf8" font-weight="bold">{nvr_ip}</tspan> · Puertos: <tspan fill="#34d399">80 HTTP / 554 RTSP / 8000 SDK</tspan></text>
+  <text x="320" y="152" fill="#94a3b8" font-family="monospace" font-size="11" text-anchor="middle">Canal CCTV: Ch {cam.get('channel', 1)} (Stream {cam.get('channel_code', '101')}) · MAC: {cam.get('mac')}</text>
+  <text x="320" y="174" fill="#a78bfa" font-family="monospace" font-size="11" text-anchor="middle">Autenticación ONVIF: admin / &#x25cf;&#x25cf;&#x25cf;&#x25cf;&#x25cf; (Guardada en Bóveda)</text>
 
   <!-- Cuadro de Estado RTSP / Enlace -->
   <rect x="70" y="195" width="500" height="54" rx="4" fill="{msg_box_bg}" stroke="{msg_box_stroke}"/>
@@ -2372,14 +2539,18 @@ class NetGuardRequestHandler(SimpleHTTPRequestHandler):
             
             cams_list = []
             for cid, cdata in CAMERAS_CATALOG.items():
-                is_online = (cid in LIVE_HOSTS_CACHE and LIVE_HOSTS_CACHE[cid].get("is_online", True)) or (NVR_CONFIG["status"] == "online" and cdata.get("sede") == "lynch")
-                lat = LIVE_HOSTS_CACHE.get(cdata.get("ip"), {}).get("ping_ms", 2.8)
+                is_lynch = (cdata.get("sede") == "lynch")
+                if is_lynch:
+                    is_online = (cid in LIVE_HOSTS_CACHE and LIVE_HOSTS_CACHE[cid].get("is_online", True)) or (NVR_CONFIG["status"] == "online")
+                else:
+                    is_online = (cid in LIVE_HOSTS_CACHE and LIVE_HOSTS_CACHE[cid].get("is_online", True)) or (LEVARTE_NVR_CONFIG["status"] == "online")
+                lat = LIVE_HOSTS_CACHE.get(cdata.get("ip"), {}).get("ping_ms", 4 if is_lynch else 12)
                 cams_list.append({
                     **cdata,
                     "status": "online" if is_online else "standby",
                     "latency_ms": lat,
                     "has_auth": True,
-                    "onvif_user": CAMERA_CREDS.get("user", "qwert"),
+                    "onvif_user": CAMERA_CREDS.get("user", "admin"),
                     "auth_status": "authorized_vault",
                     "last_snapshot": time.strftime("%H:%M:%S")
                 })
@@ -2391,7 +2562,11 @@ class NetGuardRequestHandler(SimpleHTTPRequestHandler):
                 "cameras": cams_list,
                 "nvr_config": {
                     **NVR_CONFIG,
-                    "auth_user": CAMERA_CREDS.get("user", "qwert")
+                    "auth_user": CAMERA_CREDS.get("user", "admin")
+                },
+                "levarte_nvr_config": {
+                    **LEVARTE_NVR_CONFIG,
+                    "auth_user": CAMERA_CREDS.get("user", "admin")
                 },
                 "onvif_profile": "Profile S (PTZ / Streaming H.264)",
                 "rtsp_port": 554
@@ -3791,45 +3966,93 @@ class NetGuardRequestHandler(SimpleHTTPRequestHandler):
                 data = json.loads(body.decode('utf-8'))
             except Exception:
                 data = {}
-            new_ip = data.get('ip', NVR_CONFIG['ip']).strip()
-            if new_ip:
-                NVR_CONFIG['ip'] = new_ip
-                for cid in ["cam-lynch-1", "cam-lynch-2", "cam-lynch-3", "cam-lynch-4"]:
-                    if cid in CAMERAS_CATALOG:
-                        CAMERAS_CATALOG[cid]["ip"] = new_ip
-                        ch_num = CAMERAS_CATALOG[cid].get("channel", 1)
-                        CAMERAS_CATALOG[cid]["rtsp_stream"] = f"rtsp://{new_ip}:554/Streaming/Channels/{ch_num}01"
-                        CAMERAS_CATALOG[cid]["rtsp_substream"] = f"rtsp://{new_ip}:554/Streaming/Channels/{ch_num}02"
+            target_sede = data.get('sede', 'lynch').lower()
+            new_ip = data.get('ip', '').strip()
 
-            # Probar socket rápido a puerto 80 / 554
-            is_alive = False
-            for p in [80, 554, 8000]:
-                try:
-                    s = socket.socket()
-                    s.settimeout(0.6)
-                    if s.connect_ex((NVR_CONFIG['ip'], p)) == 0:
-                        is_alive = True
+            if target_sede == 'levarte':
+                if new_ip:
+                    LEVARTE_NVR_CONFIG['ip'] = new_ip
+                    # Actualizar streams de las 8 cámaras de Levarte si apuntan a NVR
+                    for cid in [f"cam-levarte-{i}" for i in range(1, 9)]:
+                        if cid in CAMERAS_CATALOG:
+                            ch_num = CAMERAS_CATALOG[cid].get("channel", 1)
+                            CAMERAS_CATALOG[cid]["rtsp_stream"] = f"rtsp://{new_ip}:554/Streaming/Channels/{ch_num}01"
+                            CAMERAS_CATALOG[cid]["rtsp_substream"] = f"rtsp://{new_ip}:554/Streaming/Channels/{ch_num}02"
+
+                test_ip = LEVARTE_NVR_CONFIG['ip']
+                is_alive = False
+                for p in [80, 554, 8000]:
+                    try:
+                        s = socket.socket()
+                        s.settimeout(0.7)
+                        if s.connect_ex((test_ip, p)) == 0:
+                            is_alive = True
+                            s.close()
+                            break
                         s.close()
-                        break
-                    s.close()
-                except Exception:
-                    pass
-            NVR_CONFIG['status'] = "online" if is_alive else "disconnected"
-            NVR_CONFIG['last_check'] = time.strftime("%H:%M:%S")
+                    except Exception:
+                        pass
+                LEVARTE_NVR_CONFIG['status'] = "online" if is_alive else "disconnected"
+                LEVARTE_NVR_CONFIG['last_check'] = time.strftime("%H:%M:%S")
+                if is_alive:
+                    LEVARTE_OFFLINE_CACHE.pop(test_ip, None)
+                else:
+                    LEVARTE_OFFLINE_CACHE[test_ip] = time.time()
 
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps({
-                "success": True,
-                "nvr_config": {
-                    **NVR_CONFIG,
-                    "auth_user": CAMERA_CREDS.get("user", "qwert")
-                },
-                "is_alive": is_alive,
-                "message": f"NVR configurado en {NVR_CONFIG['ip']}. Estado de enlace: {'🟢 EN LÍNEA' if is_alive else '⚠️ SIN RESPUESTA (Compruebe IP y Subred en pantalla NVR)'}"
-            }).encode('utf-8'))
-            return
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    "success": True,
+                    "sede": "levarte",
+                    "nvr_config": {
+                        **LEVARTE_NVR_CONFIG,
+                        "auth_user": CAMERA_CREDS.get("user", "admin")
+                    },
+                    "is_alive": is_alive,
+                    "message": f"NVR Levarte configurado en {test_ip}. Enlace inter-sedes: {'🟢 EN LÍNEA (Puente Fortinet Activo)' if is_alive else '⚠️ SIN RESPUESTA (Túnel VPN / Enlace FortiGate a 192.168.1.x en verificación)'}"
+                }).encode('utf-8'))
+                return
+            else:
+                if new_ip:
+                    NVR_CONFIG['ip'] = new_ip
+                    for cid in ["cam-lynch-1", "cam-lynch-2", "cam-lynch-3", "cam-lynch-4"]:
+                        if cid in CAMERAS_CATALOG:
+                            CAMERAS_CATALOG[cid]["ip"] = new_ip
+                            ch_num = CAMERAS_CATALOG[cid].get("channel", 1)
+                            CAMERAS_CATALOG[cid]["rtsp_stream"] = f"rtsp://{new_ip}:554/Streaming/Channels/{ch_num}01"
+                            CAMERAS_CATALOG[cid]["rtsp_substream"] = f"rtsp://{new_ip}:554/Streaming/Channels/{ch_num}02"
+
+                # Probar socket rápido a puerto 80 / 554
+                is_alive = False
+                for p in [80, 554, 8000]:
+                    try:
+                        s = socket.socket()
+                        s.settimeout(0.6)
+                        if s.connect_ex((NVR_CONFIG['ip'], p)) == 0:
+                            is_alive = True
+                            s.close()
+                            break
+                        s.close()
+                    except Exception:
+                        pass
+                NVR_CONFIG['status'] = "online" if is_alive else "disconnected"
+                NVR_CONFIG['last_check'] = time.strftime("%H:%M:%S")
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    "success": True,
+                    "sede": "lynch",
+                    "nvr_config": {
+                        **NVR_CONFIG,
+                        "auth_user": CAMERA_CREDS.get("user", "admin")
+                    },
+                    "is_alive": is_alive,
+                    "message": f"NVR Lynch configurado en {NVR_CONFIG['ip']}. Estado de enlace: {'🟢 EN LÍNEA' if is_alive else '⚠️ SIN RESPUESTA (Compruebe IP y Subred en pantalla NVR)'}"
+                }).encode('utf-8'))
+                return
 
         # ── SISTEMA ANTIRROBO: ARMAR / DESARMAR ──
         if path == '/api/antitheft/toggle':

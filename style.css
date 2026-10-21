@@ -4124,6 +4124,11 @@ tbody td{padding:9px 12px;font-size:11px;color:var(--text-2);white-space:nowrap}
   grid-template-columns: repeat(auto-fit, minmax(460px, 1fr));
   gap: 16px;
 }
+.cameras-grid-all {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 14px;
+}
 .cameras-grid-focus {
   display: grid;
   grid-template-columns: 1fr;
