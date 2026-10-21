@@ -1596,6 +1596,17 @@ if HAS_REQUESTS:
         NVR_HTTP_SESSION = None
         NVR_DIGEST_AUTH = None
 
+def check_quick_tcp(ip, port, timeout=0.25):
+    """Prueba ultrarrápida de puerto TCP (<250ms) sin bloqueos de requests/urllib3"""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(timeout)
+        res = s.connect_ex((ip, port))
+        s.close()
+        return res == 0
+    except Exception:
+        return False
+
 def fetch_real_camera_snapshot(target_key_or_ip, prefer_substream=False):
     """
     Obtiene captura de vídeo en tiempo real directamente del NVR con latencia ultra baja (<90ms).
@@ -1634,42 +1645,66 @@ def fetch_real_camera_snapshot(target_key_or_ip, prefer_substream=False):
             endpoints.append(f"http://{target_ip}:{NVR_CONFIG['http_port']}/ISAPI/Streaming/channels/{ch_num}01/picture")
         endpoints.append(f"http://{target_ip}:{NVR_CONFIG['http_port']}/onvif-http/snapshot?channel={ch_num}&subtype=0")
     else:
-        # Sede Levarte (Módulo A-15): Probar NVR Levarte y cámara individual
+        # Sede Levarte (Módulo A-15): Probar NVR Levarte y puestos relay
         lev_nvr = LEVARTE_NVR_CONFIG["ip"]
         cam_ip = cam.get("ip", lev_nvr)
-        # Solo intentar si no ha fallado en los últimos 4 segundos para mantener fluidez
-        if now_t - LEVARTE_OFFLINE_CACHE.get(lev_nvr, 0) > 4.0:
+        lan_srv = LEVARTE_NVR_CONFIG.get("server_lan_ip", "192.168.1.121")
+        wan_srv = LEVARTE_NVR_CONFIG.get("server_wan_ip", "190.161.66.20")
+
+        # Circuit breaker para Lynch: si el enlace inter-sedes está en espera de ruteo,
+        # verificar previamente con sockets TCP de bajo nivel (0.2s) para no bloquear el servidor
+        if CURRENT_SEDE == "lynch":
+            last_off = LEVARTE_OFFLINE_CACHE.get("global_levarte", 0)
+            if now_t - last_off < 25.0 and LEVARTE_NVR_CONFIG.get("status") != "online":
+                return None, None
+
+            # Test TCP rápido sin llamadas HTTP pesadas
+            live_host = None
+            for chk_ip, chk_port in [(lan_srv, 8000), (wan_srv, 8000), (lev_nvr, 80)]:
+                if check_quick_tcp(chk_ip, chk_port, timeout=0.22):
+                    live_host = (chk_ip, chk_port)
+                    break
+
+            if not live_host:
+                LEVARTE_OFFLINE_CACHE["global_levarte"] = now_t
+                LEVARTE_NVR_CONFIG["status"] = "standby"
+                return None, None
+
+            # Si el host respondió al socket, consultar solo el endpoint que está vivo
+            rip, rport = live_host
+            if rport == 8000:
+                endpoints.append(f"http://{rip}:8000/api/cameras/snapshot?ip={target_key_or_ip}&relay=1")
+            else:
+                endpoints.append(f"http://{rip}:{LEVARTE_NVR_CONFIG['http_port']}/ISAPI/Streaming/channels/{ch_code}/picture")
+        else:
+            # En Levarte localmente: acceso directo de ultra-baja latencia en LAN
             endpoints.append(f"http://{lev_nvr}:{LEVARTE_NVR_CONFIG['http_port']}/ISAPI/Streaming/channels/{ch_code}/picture")
             if prefer_substream:
                 endpoints.append(f"http://{lev_nvr}:{LEVARTE_NVR_CONFIG['http_port']}/ISAPI/Streaming/channels/{ch_num}01/picture")
             endpoints.append(f"http://{lev_nvr}:{LEVARTE_NVR_CONFIG['http_port']}/onvif-http/snapshot?channel={ch_num}&subtype=0")
-            # Soporte para Servidor / Nodo EinsNet activo en Levarte (Relay en puerto 8000)
-            endpoints.append(f"http://{lev_nvr}:8000/api/cameras/snapshot?ip={target_key_or_ip}&relay=1")
-            endpoints.append(f"http://192.168.1.131:8000/api/cameras/snapshot?ip={target_key_or_ip}&relay=1")
-            endpoints.append(f"http://192.168.1.130:8000/api/cameras/snapshot?ip={target_key_or_ip}&relay=1")
-        if cam_ip and cam_ip != lev_nvr and (now_t - LEVARTE_OFFLINE_CACHE.get(cam_ip, 0) > 4.0):
-            endpoints.append(f"http://{cam_ip}/ISAPI/Streaming/channels/101/picture")
-            endpoints.append(f"http://{cam_ip}/onvif-http/snapshot?channel=1&subtype=0")
+            if cam_ip and cam_ip != lev_nvr:
+                endpoints.append(f"http://{cam_ip}/ISAPI/Streaming/channels/101/picture")
+                endpoints.append(f"http://{cam_ip}/onvif-http/snapshot?channel=1&subtype=0")
 
     session = NVR_HTTP_SESSION if NVR_HTTP_SESSION is not None else requests
     for url in endpoints:
         try:
-            r = session.get(url, auth=auth, timeout=0.6, headers={"User-Agent": "EinsNet-CCTV/5.0"})
+            r = session.get(url, auth=auth, timeout=0.35, headers={"User-Agent": "EinsNet-CCTV/5.0"})
             if r.status_code == 200 and len(r.content) > 500 and (r.content.startswith(b'\xff\xd8') or b'JFIF' in r.content[:30] or b'PNG' in r.content[:10]):
                 if is_lynch:
                     NVR_CONFIG["status"] = "online"
                 else:
                     LEVARTE_NVR_CONFIG["status"] = "online"
+                    LEVARTE_OFFLINE_CACHE.pop("global_levarte", None)
                     LEVARTE_OFFLINE_CACHE.pop(LEVARTE_NVR_CONFIG["ip"], None)
                 CCTV_SNAPSHOT_CACHE[target_key_or_ip] = (now_t, r.content, "image/jpeg")
                 return r.content, "image/jpeg"
         except Exception:
             pass
 
-    if not is_lynch:
-        LEVARTE_OFFLINE_CACHE[LEVARTE_NVR_CONFIG["ip"]] = now_t
-        if cam.get("ip"):
-            LEVARTE_OFFLINE_CACHE[cam.get("ip")] = now_t
+    if CURRENT_SEDE == "lynch" and not is_lynch:
+        LEVARTE_OFFLINE_CACHE["global_levarte"] = now_t
+        LEVARTE_NVR_CONFIG["status"] = "standby"
 
     return None, None
 
@@ -1741,7 +1776,7 @@ def generate_camera_snapshot_svg(target_key_or_ip):
             status_text = "PUENTE INTER-SEDES"
             title_text = "🏢 SEDE LEVARTE (MÓDULO A-15) · CÁMARA CONFIGURADA"
             msg_title = "🔄 VERIFICANDO PUENTE INTER-SEDES (LYNCH ↔ LEVARTE)"
-            msg_sub = f"IP Destino: {nvr_ip} (Cámara: {cam.get('ip')}) | Gateway Fortinet: {gw_ip}"
+            msg_sub = f"NVR: {nvr_ip} | Servidor Levarte: 192.168.1.121 (WAN: 190.161.66.20) | Gateway: {gw_ip}"
             msg_box_bg = "rgba(56, 189, 248, 0.10)"
             msg_box_stroke = "rgba(56, 189, 248, 0.3)"
             msg_title_color = "#38bdf8"
