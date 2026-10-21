@@ -4,11 +4,23 @@ title EinsNet · Guardián y Levantador de Servidor
 cd /d "%~dp0"
 
 echo ======================================================================
-echo    EinsNet · Guardián y Auto-Recuperación de Servidor LAN (Puerto 8000)
+echo    EinsNet · Guardián y Servidor Multi-Sede v6.0 (Puerto 8000)
+echo    Campus Central Lynch ⟷ Módulo A-15 Levarte
 echo ======================================================================
 echo.
-echo [*] Verificando estado del servidor en puerto 8000 y asegurando servicio...
 
+echo [*] Comprobando actualizaciones desde GitHub (git pull origin main)...
+where git >nul 2>&1
+if %ERRORLEVEL% equ 0 (
+    git fetch origin main >nul 2>&1
+    git reset --hard origin/main >nul 2>&1
+    echo [OK] Repositorio sincronizado con la última versión oficial (12 Cámaras y Bi-Sede).
+) else (
+    echo [!] Git no detectado en PATH, iniciando con archivos locales.
+)
+echo.
+
+echo [*] Verificando estado del servidor en puerto 8000 y asegurando servicio...
 python supervisor_einsnet.py --ensure
 
 echo.

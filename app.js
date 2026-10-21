@@ -3632,6 +3632,16 @@ async function syncLiveHostStatus() {
     const data = await res.json();
     if (!data || !data.online_ips) return;
 
+    // Actualizar sede activa en título de cabecera
+    const brandSub = $('brand-subtitle');
+    if (brandSub && data.current_sede) {
+      if (data.current_sede === 'levarte') {
+        brandSub.innerHTML = `📍 Sede Levarte (Módulo A-15) · IP Servidor: <strong style="color:#c084fc;">${data.my_ip || '192.168.1.x'}</strong>`;
+      } else {
+        brandSub.innerHTML = `🏫 Sede Patricio Lynch (Campus Central) · IP Servidor: <strong style="color:#38bdf8;">${data.my_ip || '192.168.80.x'}</strong>`;
+      }
+    }
+
     let newlyConnected = 0;
     const onlineSet = new Set(data.online_ips);
 
