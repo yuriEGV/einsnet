@@ -60,20 +60,53 @@ ISOLATED_ROUTERS = {}    # { router_ip: { ip, name, area, subnet, reason, isolat
 QUARANTINE_AUDIT_LOG = []
 
 def get_my_ip():
-    """Detecta dinámicamente la IP local del equipo en cualquier red o subred"""
+    """Detecta dinámicamente la IP local del equipo, priorizando interfaces físicas escolares sobre VPNs o adaptadores virtuales"""
+    candidates = []
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(('1.1.1.1', 80))
-        ip = s.getsockname()[0]
+        candidates.append(s.getsockname()[0])
         s.close()
-        return ip
     except Exception:
-        try:
-            return socket.gethostbyname(socket.gethostname())
-        except Exception:
-            return '127.0.0.1'
+        pass
+
+    try:
+        host_name = socket.gethostname()
+        for info in socket.getaddrinfo(host_name, None):
+            ip = info[4][0]
+            if ':' not in ip and ip not in candidates:
+                candidates.append(ip)
+    except Exception:
+        pass
+
+    # Priorizar redes físicas de las sedes (192.168.1.x Levarte, 192.168.80.x Lynch, 192.168.9.x)
+    for ip in candidates:
+        if ip.startswith('192.168.1.') or ip.startswith('192.168.80.') or ip.startswith('192.168.9.'):
+            return ip
+    for ip in candidates:
+        if ip.startswith('192.168.'):
+            return ip
+    for ip in candidates:
+        if not ip.startswith('127.') and not ip.startswith('169.254.') and not ip.startswith('10.2.'):
+            return ip
+    return candidates[0] if candidates else '127.0.0.1'
+
+def auto_cleanup_firewall_blocks():
+    """Limpia automáticamente cualquier regla residual de bloqueo en Windows Firewall al arrancar"""
+    if os.name != 'nt':
+        return
+    try:
+        ps_clean = (
+            "Get-NetFirewallRule -ErrorAction SilentlyContinue | "
+            "Where-Object { ($_.DisplayName -like '*EinsNet*' -or $_.DisplayName -like '*NetGuard*' -or $_.DisplayName -like '*Cut*' -or $_.DisplayName -like '*Aislar*') -and $_.Action -eq 'Block' } | "
+            "Remove-NetFirewallRule -ErrorAction SilentlyContinue"
+        )
+        subprocess.Popen(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps_clean], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        pass
 
 MY_IP = get_my_ip()
+auto_cleanup_firewall_blocks()
 
 # Guardar automáticamente la IP detectada en server_ip.txt para que todos los .bat y scripts la lean
 try:
@@ -1959,7 +1992,7 @@ def active_subnet_sweep():
         # y chequear switches de Lynch si existe enlace o túnel entre sedes
         ips_to_sweep += [f"192.168.9.{i}" for i in [1, 2, 3, 4, 10, 15, 20, 25, 26, 30, 50, 60, 99, 100]] + \
                         [f"192.168.80.{i}" for i in [1, 10, 12, 13, 14, 15, 16, 17, 20, 22, 47, 70]]
-    with ThreadPoolExecutor(max_workers=60) as ex:
+    with ThreadPoolExecutor(max_workers=8) as ex:
         list(ex.map(_ping_ip, ips_to_sweep))
 
 last_sweep_time = 0
