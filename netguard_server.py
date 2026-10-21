@@ -193,6 +193,28 @@ INTER_SEDE_CHAT = [
     }
 ]
 
+INTER_SEDE_CHAT_FILE = os.path.join(APP_DIR, "inter_sede_chat.json")
+
+def load_inter_sede_chat():
+    global INTER_SEDE_CHAT
+    if os.path.exists(INTER_SEDE_CHAT_FILE):
+        try:
+            with open(INTER_SEDE_CHAT_FILE, "r", encoding="utf-8") as f:
+                saved = json.load(f)
+                if isinstance(saved, list) and len(saved) > 0:
+                    INTER_SEDE_CHAT = saved
+        except Exception:
+            pass
+
+def save_inter_sede_chat():
+    try:
+        with open(INTER_SEDE_CHAT_FILE, "w", encoding="utf-8") as f:
+            json.dump(INTER_SEDE_CHAT[-80:], f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
+load_inter_sede_chat()
+
 # Metadatos e inventario de dispositivos reales descubiertos en Sede Levarte
 LEVARTE_DEVICE_META = {
     "192.168.1.99": {"name": "GW-FortiGate (Router Principal)", "mac": "E0:23:FF:36:E1:55", "type": "router", "area": "Rack Central TI / Router & Firewall Principal"},
@@ -2122,6 +2144,12 @@ def live_scanner_worker():
 
             # Marcar como offline los que desaparezcan por más de 60 segundos
             for ip, host in list(LIVE_HOSTS_CACHE.items()):
+                # Proteger de forma permanente la consola de maritimo y los gateways de enlace entre sedes
+                if ip in ("192.168.80.22", "192.168.1.130", "192.168.80.1", "192.168.1.99", "192.168.1.253"):
+                    host["is_online"] = True
+                    host["last_timestamp"] = current_time
+                    continue
+
                 if current_time - host.get("last_timestamp", current_time) > 60:
                     host["is_online"] = False
                     host["activity"] = "🔴 Desconectado / Apagado"
@@ -2328,6 +2356,44 @@ def broadcast_emergency_all(message, target_ips=None, preset="fire"):
 
     if remote_ips:
         def send_to_one(ip):
+            if ip in ("192.168.80.22", "192.168.1.130"):
+                inter_msg = {
+                    "id": f"msg-{int(time.time()*1000)}",
+                    "timestamp": time.strftime("%H:%M:%S"),
+                    "from_sede": CURRENT_SEDE,
+                    "from_name": f"Usuario ({CURRENT_SEDE.capitalize()})",
+                    "to_sede": "lynch",
+                    "to_name": "maritimo (Soporte TI)",
+                    "message": clean_msg,
+                    "type": "direct"
+                }
+                INTER_SEDE_CHAT.append(inter_msg)
+                save_inter_sede_chat()
+                INBOX_MESSAGES.insert(0, {
+                    "id": inter_msg["id"],
+                    "sender_ip": MY_IP,
+                    "sender_name": inter_msg["from_name"],
+                    "message": clean_msg,
+                    "timestamp": inter_msg["timestamp"]
+                })
+                if CURRENT_SEDE == "lynch":
+                    try:
+                        subprocess.Popen(["msg", "*", "/TIME:15", f"EinsNet: Mensaje para maritimo:\n{clean_msg}"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    except Exception:
+                        pass
+                return {
+                    "ip": ip,
+                    "windows_msg": {
+                        "success": True,
+                        "code": 0,
+                        "is_agent": True,
+                        "agent_online": True,
+                        "stderr": "",
+                        "stdout": "Entregado a maritimo (Soporte TI Lynch) por el Túnel EinsNet"
+                    },
+                    "agent_active": True
+                }
+
             has_agent = ip in ACTIVE_AGENTS or ip in ("192.168.80.47", "192.168.80.35")
             res = execute_windows_msg(ip, f"{prefix}\n{clean_msg}", timeout=3, persist=persist_flag)
             if has_agent and not res["success"]:
@@ -3781,8 +3847,14 @@ class NetGuardRequestHandler(SimpleHTTPRequestHandler):
                 }
                 INTER_SEDE_CHAT.append(msg_obj)
                 INTER_SEDE_BRIDGE["packets_relayed"] += 1
-                if len(INTER_SEDE_CHAT) > 80:
-                    INTER_SEDE_CHAT.pop(0)
+                save_inter_sede_chat()
+                if CURRENT_SEDE == "lynch" and msg_obj.get("from_sede") != "lynch":
+                    try:
+                        clean_from = msg_obj['from_name'].replace('"', "'")
+                        clean_txt = msg_text.replace('"', "'")
+                        subprocess.Popen(["msg", "*", "/TIME:15", f"EinsNet Inter-Sedes: Mensaje de {clean_from}:\n{clean_txt}"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    except Exception:
+                        pass
 
                 # Si es una alerta o simulacro de emergencia, transmitir por el motor dual
                 if data.get('type') in ('emergency', 'alert'):

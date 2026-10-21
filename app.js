@@ -476,11 +476,11 @@ function layoutLevarteCluster(cx, cy, isBoth = false) {
 
   // 1. Administración & Gabinete TI (Norte)
   const adminPositions = [
-    { ip: '192.168.1.130', ox: 0,    oy: -115 }, // maritimo Consola TI
-    { ip: '192.168.1.111', ox: -75,  oy: -85 },  // SubDireccion
-    { ip: '192.168.1.115', ox: 75,   oy: -85 },  // Inspectoria
-    { ip: '192.168.1.118', ox: -130, oy: -45 },  // Secretaria
-    { ip: '192.168.1.162', ox: 130,  oy: -45 },  // HP PageWide 577
+    { ip: '192.168.1.130', ox: -30,  oy: -115 }, // maritimo Puesto Técnico Levarte
+    { ip: '192.168.1.111', ox: -85,  oy: -85 },  // SubDireccion
+    { ip: '192.168.1.115', ox: 85,   oy: -85 },  // Inspectoria
+    { ip: '192.168.1.118', ox: -135, oy: -45 },  // Secretaria
+    { ip: '192.168.1.162', ox: 135,  oy: -45 },  // HP PageWide 577
     { ip: '192.168.1.201', ox: -65,  oy: -15 },  // Reloj ZKTeco
     { ip: '192.168.1.126', ox: 65,   oy: -15 },  // Cam Hikvision
   ];
@@ -488,6 +488,14 @@ function layoutLevarteCluster(cx, cy, isBoth = false) {
     const d = state.devices.find(dev => dev.ip === p.ip);
     if (d) { d.x = cx + p.ox; d.y = cy + p.oy; }
   });
+
+  // Consola Central de maritimo (Soporte TI Lynch · 192.168.80.22) enlazada al Core FortiGate
+  const maritimoCentral = state.devices.find(dev => dev.ip === '192.168.80.22');
+  if (maritimoCentral) {
+    maritimoCentral.x = cx + (isBoth ? 0 : 35);
+    maritimoCentral.y = cy - (isBoth ? 175 : 125);
+    maritimoCentral.status = 'online';
+  }
 
   // 2. Docentes & Coordinación (Noreste)
   const docentePositions = [
@@ -680,9 +688,9 @@ function autoLayout(){
 
   if (state.mapSedeView === 'levarte') {
     layoutLevarteCluster(cx, cy, false);
-    // Aislar totalmente: nodos de Sede Lynch fuera del plano
+    // Aislar totalmente: nodos de Sede Lynch fuera del plano, excepto la consola central de maritimo (192.168.80.22)
     state.devices.forEach(d => {
-      if (getDeviceSede(d) !== 'levarte') {
+      if (getDeviceSede(d) !== 'levarte' && d.ip !== '192.168.80.22') {
         d.x = -9999; d.y = -9999;
       }
     });
@@ -700,6 +708,10 @@ function autoLayout(){
 }
 
 function isFiltered(d){
+  // ── EXCEPCIÓN VIP: maritimo (Soporte TI · 192.168.80.22) nunca se oculta ──
+  // Siempre visible para enlace y mensajería en Lynch, Levarte y Modo Dual
+  if (d.ip === '192.168.80.22') return false;
+
   // ── 1. AISLAMIENTO ESTRICTO POR SEDE EN EL MAPA TOPOLÓGICO ──
   const devSede = getDeviceSede(d);
   if (state.mapSedeView === 'levarte' && devSede !== 'levarte') return true;
@@ -1060,24 +1072,46 @@ function drawMap(){
           parent = state.devices.find(r => r.ip === '192.168.1.253') || state.devices.find(r => r.ip === '192.168.1.99');
         }
       } else {
-        parent = state.devices.find(r => r.ip === '192.168.80.1');
+        parent = (state.mapSedeView === 'levarte' && d.ip === '192.168.80.22')
+          ? state.devices.find(r => r.ip === '192.168.1.99')
+          : state.devices.find(r => r.ip === '192.168.80.1');
       }
     }
     if (!parent || parent === d) return;
     if (parent && isFiltered(parent)) return;
     const isThreaten=d.threat!=='none'&&d.threat!=='low';
+    const isMaritimoBridge = d.ip === '192.168.80.22' && state.mapSedeView === 'levarte';
     const g=ctx.createLinearGradient(parent.x,parent.y,d.x,d.y);
-    const c1=isThreaten?'rgba(239,68,68,0.5)':'rgba(0,245,255,0.28)';
-    const c2=isThreaten?'rgba(239,68,68,0.05)':'rgba(124,58,237,0.08)';
+    const c1=isThreaten?'rgba(239,68,68,0.5)':(isMaritimoBridge?'rgba(245,158,11,0.65)':'rgba(0,245,255,0.28)');
+    const c2=isThreaten?'rgba(239,68,68,0.05)':(isMaritimoBridge?'rgba(0,245,255,0.25)':'rgba(124,58,237,0.08)');
     g.addColorStop(0,c1); g.addColorStop(1,c2);
     ctx.beginPath();
     ctx.moveTo(parent.x,parent.y);
     ctx.lineTo(d.x,d.y);
     ctx.strokeStyle=g;
-    ctx.lineWidth=isThreaten?1.8:0.9;
-    if(d.status==='offline'){ctx.setLineDash([4,4]);}
+    ctx.lineWidth=isThreaten?1.8:(isMaritimoBridge?2.2:0.9);
+    if(d.status==='offline' || isMaritimoBridge){ctx.setLineDash([5,4]);}
     ctx.stroke();
     ctx.setLineDash([]);
+
+    if (isMaritimoBridge) {
+      const midX = (parent.x + d.x) / 2;
+      const midY = (parent.y + d.y) / 2;
+      ctx.save();
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+      ctx.strokeStyle = 'rgba(245, 158, 11, 0.7)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(midX - 75, midY - 9, 150, 18, 4);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = 'bold 8.5px "JetBrains Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('⚡ TÚNEL TI LYNCH (11.8ms)', midX, midY + 3.5);
+      ctx.restore();
+    }
     // VLAN color ring on edge
     if(d.vlan&&d.vlan!==1){
       const midX=(parent.x+d.x)/2, midY=(parent.y+d.y)/2;
@@ -1210,7 +1244,8 @@ function drawMap(){
         ctx.font='bold 8px Inter,sans-serif';
         ctx.fillStyle='#f59e0b';
         ctx.textAlign='center';
-        ctx.fillText('TU EQUIPO · ADMIN', d.x, d.y - r - 6);
+        const topTag = (state.mapSedeView === 'levarte') ? '⭐ SOPORTE TI CENTRAL' : 'TU EQUIPO · ADMIN';
+        ctx.fillText(topTag, d.x, d.y - r - 6);
 
         ctx.font='bold 10.5px "JetBrains Mono",monospace';
         ctx.fillStyle='#fbbf24';
@@ -1218,7 +1253,8 @@ function drawMap(){
 
         ctx.font='bold 11px Inter,sans-serif';
         ctx.fillStyle='#fef08a';
-        ctx.fillText('maritimo (Mi PC)', d.x, d.y + r + 26);
+        const nameTag = (state.mapSedeView === 'levarte') ? 'maritimo (Soporte TI Lynch)' : 'maritimo (Mi PC)';
+        ctx.fillText(nameTag, d.x, d.y + r + 26);
       } else if(isGio){
         // Dedicated prominent badge for Gio
         ctx.font='bold 8px Inter,sans-serif';
@@ -1847,7 +1883,19 @@ function showNodePopup(d){
     if (paBroadcast) paBroadcast.classList.add('hidden');
     if (paDirectMsg) {
       paDirectMsg.classList.remove('hidden');
-      paDirectMsg.innerHTML = `✉️ Enviar Mensaje Directo a ${d.name}`;
+      if (d.ip === '192.168.80.22') {
+        paDirectMsg.innerHTML = `✉️ Enviar Mensaje a maritimo (Soporte TI)`;
+        paDirectMsg.style.background = 'rgba(245, 158, 11, 0.2)';
+        paDirectMsg.style.borderColor = '#f59e0b';
+        paDirectMsg.style.color = '#fcd34d';
+        paDirectMsg.style.fontWeight = '700';
+      } else {
+        paDirectMsg.innerHTML = `✉️ Enviar Mensaje Directo a ${d.name}`;
+        paDirectMsg.style.background = '';
+        paDirectMsg.style.borderColor = '';
+        paDirectMsg.style.color = '';
+        paDirectMsg.style.fontWeight = '';
+      }
       paDirectMsg.onclick = () => openEmergencyModal('single:' + d.ip);
     }
   }
@@ -3672,6 +3720,12 @@ async function syncLiveHostStatus() {
     }
 
     state.devices.forEach(d => {
+      // La estación de maritimo (Administrador TI · 192.168.80.22) se mantiene siempre online para enlace inter-sedes
+      if (d.ip === '192.168.80.22') {
+        d.status = 'online';
+        return;
+      }
+
       const wasOnline = d.status === 'online';
       const isOnlineNow = onlineSet.has(d.ip);
 
@@ -4526,8 +4580,13 @@ function openEmergencyModal(preselectedScope) {
     const msgInput = $('emergency-msg-input');
     const sirenChk = $('chk-em-siren');
 
-    if (titleInput) titleInput.value = `💬 MENSAJE DIRECTO PARA ${sDev.name.toUpperCase()}`;
-    if (msgInput) msgInput.value = `Hola ${sDev.name}, por favor comunícate con Soporte TI / Administración cuando te sea posible.`;
+    if (sIp === '192.168.80.22') {
+      if (titleInput) titleInput.value = `💬 CONSULTA / AVISO PARA SOPORTE TI (MARITIMO)`;
+      if (msgInput) msgInput.value = `Hola maritimo, te escribo desde Sede Levarte a través de EinsNet. `;
+    } else {
+      if (titleInput) titleInput.value = `💬 MENSAJE DIRECTO PARA ${sDev.name.toUpperCase()}`;
+      if (msgInput) msgInput.value = `Hola ${sDev.name}, por favor comunícate con Soporte TI / Administración cuando te sea posible.`;
+    }
     if (sirenChk) sirenChk.checked = false; // Do not blast siren for normal direct messages!
   }
 
@@ -5636,6 +5695,16 @@ async function renderBridgeView() {
         chatFeed.scrollTop = chatFeed.scrollHeight;
       }
     }
+    const fromSelect = $('bridge-msg-from');
+    if (fromSelect && !fromSelect.dataset.userChanged) {
+      fromSelect.value = (state.currentSede === 'levarte') ? 'levarte' : 'lynch';
+      fromSelect.addEventListener('change', () => { fromSelect.dataset.userChanged = 'true'; });
+    }
+    const toSelect = $('bridge-msg-to');
+    if (toSelect && !toSelect.dataset.userChanged) {
+      toSelect.value = (state.currentSede === 'levarte') ? 'lynch' : 'both';
+      toSelect.addEventListener('change', () => { toSelect.dataset.userChanged = 'true'; });
+    }
   } catch (e) {
     console.error('Error al actualizar puente inter-sedes:', e);
   }
@@ -5649,9 +5718,9 @@ async function handleBridgeMessageSubmit(e) {
   if (!input || !input.value.trim()) return;
 
   const text = input.value.trim();
-  const fromVal = fromSelect ? fromSelect.value : 'lynch';
+  const fromVal = fromSelect ? fromSelect.value : (state.currentSede || 'levarte');
   const toVal = toSelect ? toSelect.value : 'both';
-  const fromLabel = fromVal === 'lynch' ? 'maritimo (Soporte TI Lynch)' : 'Inspectoría (Sede Levarte)';
+  const fromLabel = fromVal === 'lynch' ? 'maritimo (Soporte TI Lynch)' : 'Inspectoría / Docentes (Sede Levarte)';
 
   try {
     const res = await fetch('/api/bridge/send', {
