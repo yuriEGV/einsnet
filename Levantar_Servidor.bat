@@ -1,36 +1,35 @@
 @echo off
 chcp 65001 >nul
-title EinsNet · Guardián y Levantador de Servidor
+title EinsNet - Servidor Multi-Sede v6.0 (Puerto 8000)
 cd /d "%~dp0"
 
 echo ======================================================================
-echo    EinsNet · Guardián y Servidor Multi-Sede v6.0 (Puerto 8000)
-echo    Campus Central Lynch ⟷ Módulo A-15 Levarte
+echo    EinsNet - Servidor Multi-Sede v6.0 (Puerto 8000)
+echo    Campus Central Lynch - Modulo A-15 Levarte
 echo ======================================================================
 echo.
 
-echo [*] Comprobando actualizaciones desde GitHub (git pull origin main)...
+echo [*] Verificando Git...
 where git >nul 2>&1
-if %ERRORLEVEL% equ 0 (
-    git fetch origin main >nul 2>&1
-    git reset --hard origin/main >nul 2>&1
-    echo [OK] Repositorio sincronizado con la última versión oficial (12 Cámaras y Bi-Sede).
-) else (
-    echo [!] Git no detectado en PATH, iniciando con archivos locales.
-)
-echo.
+if %ERRORLEVEL% equ 0 goto :SYNC_GIT
+goto :START_SERVER
 
-echo [*] Verificando estado del servidor en puerto 8000 y asegurando servicio...
-python supervisor_einsnet.py --ensure
+:SYNC_GIT
+echo [*] Sincronizando con repositorio oficial (git pull)...
+git fetch origin main >nul 2>&1
+git reset --hard origin/main >nul 2>&1
+echo [OK] Repositorio al dia con GitHub.
 
-echo.
-echo [OK] El servidor EinsNet está ACTIVO y OPERATIVO en puerto 8000.
-echo [OK] Guardián de fondo ACTIVADO (Se reiniciará solo si llega a caerse).
-echo.
-echo [*] Abriendo consola de control en el navegador...
+:START_SERVER
+echo [*] Levantando Servidor EinsNet en puerto 8000...
+start "" python supervisor_einsnet.py --ensure
+ping 127.0.0.1 -n 3 >nul
+
+echo [*] Abriendo navegador en http://localhost:8000...
 start "" "http://localhost:8000"
 
 echo.
-echo [ Listo. Puedes cerrar esta ventana en cualquier momento ]
-timeout /t 3 /nobreak >nul
+echo [OK] Servidor iniciado con exito en http://localhost:8000
+echo.
+ping 127.0.0.1 -n 3 >nul
 exit
