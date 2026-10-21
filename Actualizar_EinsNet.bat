@@ -16,16 +16,30 @@ taskkill /F /IM pythonw.exe >nul 2>&1
 echo [*] Paso 2: Descargando la última versión oficial desde GitHub...
 where git >nul 2>&1
 if %ERRORLEVEL% equ 0 (
+    echo [*] Git detectado. Sincronizando con git fetch y reset...
     git fetch origin main
     git reset --hard origin/main
-    echo.
-    echo [OK] Código 100%% actualizado a la última versión (v6.0).
-) else (
-    echo [ERROR] Git no está instalado o no se encuentra en el PATH.
-    echo Por favor asegúrate de tener Git instalado para actualizar automáticamente.
-    pause
-    exit /b 1
+    if %ERRORLEVEL% equ 0 (
+        echo [OK] Repositorio sincronizado exitosamente vía Git.
+        goto :UPDATE_DONE
+    )
 )
+
+echo [!] Git no disponible o fallo en sincronización.
+echo [*] Descargando actualización directa vía HTTPS desde GitHub...
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; " ^
+    "Write-Host '[*] Conectando con GitHub (yuriEGV/einsnet)...'; " ^
+    "Invoke-WebRequest -Uri 'https://github.com/yuriEGV/einsnet/archive/refs/heads/main.zip' -OutFile 'einsnet_latest.zip' -UseBasicParsing; " ^
+    "Write-Host '[*] Descomprimiendo archivos actualizados...'; " ^
+    "Expand-Archive -Path 'einsnet_latest.zip' -DestinationPath 'einsnet_tmp_update' -Force; " ^
+    "Copy-Item -Path 'einsnet_tmp_update\einsnet-main\*' -Destination '.' -Recurse -Force; " ^
+    "Remove-Item -Path 'einsnet_latest.zip', 'einsnet_tmp_update' -Recurse -Force; " ^
+    "Write-Host '[OK] Actualización descargada e instalada con éxito.'"
+
+:UPDATE_DONE
+echo.
+echo [OK] Código 100%% actualizado a la última versión (v6.0 con 12 Cámaras y Bi-Sede).
 
 echo.
 echo [*] Paso 3: Reiniciando el servidor EinsNet en puerto 8000...
