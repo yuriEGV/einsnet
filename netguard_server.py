@@ -2785,6 +2785,7 @@ class NetGuardRequestHandler(SimpleHTTPRequestHandler):
             
             self.wfile.write(json.dumps({
                 "success": True,
+                "current_sede": CURRENT_SEDE,
                 "timestamp": time.strftime("%H:%M:%S"),
                 "total_cameras": len(cams_list),
                 "cameras": cams_list,

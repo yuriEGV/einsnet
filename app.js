@@ -6540,6 +6540,18 @@ async function renderCamerasDashboard() {
       }
     }
 
+    // Auto-adaptar filtro de cámaras según la sede activa detectada si el usuario no ha forzado un filtro manual
+    if (!window._userSelectedCameraSede) {
+      if (data.current_sede === 'levarte' || state.mapSedeView === 'levarte') {
+        camerasSedeFilter = 'levarte';
+      } else if (data.current_sede === 'lynch' || state.mapSedeView === 'lynch') {
+        camerasSedeFilter = 'lynch';
+      }
+      document.querySelectorAll('#cameras-sede-filter .seg-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.camSede === camerasSedeFilter);
+      });
+    }
+
     const filtered = camerasDataCache.filter(c => {
       if (camerasSedeFilter === 'all') return true;
       return c.sede === camerasSedeFilter;
@@ -6560,7 +6572,7 @@ async function renderCamerasDashboard() {
 
     if (camerasLayoutMode === 'focus') {
       container.className = 'cameras-grid-focus';
-    } else if (camerasSedeFilter === 'all') {
+    } else if (camerasSedeFilter === 'all' || camerasSedeFilter === 'levarte') {
       container.className = 'cameras-grid-all';
     } else {
       container.className = 'cameras-grid-2x2';
@@ -6814,12 +6826,13 @@ function initCamerasModule() {
     });
   });
 
-  // Filtro de Sede (Lynch 4 Cams / Levarte 4 Cams / Todas 8 Cams)
+  // Filtro de Sede (Lynch 4 Cams / Levarte 8 Cams / Todas 12 Cams)
   document.querySelectorAll('#cameras-sede-filter .seg-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('#cameras-sede-filter .seg-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       camerasSedeFilter = btn.dataset.camSede;
+      window._userSelectedCameraSede = true;
       renderCamerasDashboard();
     });
   });
