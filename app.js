@@ -133,7 +133,7 @@ const LEVARTE_SEED = [
   { ip:'192.168.1.136', name:'DESKTOP-MKKKBEC', schoolArea:'Sala de Profesores 02 (Terminal RDP)', mac:'54:B8:0A:55:11:36', vendor:'Dell Inc.', type:'pc', vlan:10, status:'online', lat:4, jitter:0.5, loss:0, up:420, down:1100, bridgeTo:'192.168.1.253' },
   { ip:'192.168.1.162', name:'HP PageWide Pro 577 MFP', schoolArea:'Centro de Impresión y Copiado Docente', mac:'38:22:E2:55:16:62', vendor:'HP Inc.', type:'printer', vlan:30, status:'online', lat:5, jitter:0.6, loss:0, up:80, down:240, bridgeTo:'192.168.1.253' },
   { ip:'192.168.1.201', name:'Reloj Biometrico ZKTeco', schoolArea:'Control de Asistencia Entrada Principal', mac:'00:17:61:55:20:01', vendor:'ZKTeco Inc.', type:'server', vlan:30, status:'online', lat:2, jitter:0.3, loss:0, up:90, down:150, bridgeTo:'192.168.1.99' },
-  { ip:'192.168.1.126', name:'Camara CCTV Hikvision', schoolArea:'CCTV Seguridad Acceso Calle Levarte', mac:'BC:54:51:55:12:26', vendor:'Hikvision Digital', type:'server', vlan:30, status:'online', lat:3, jitter:0.4, loss:0, up:1400, down:220, bridgeTo:'192.168.1.253' },
+  { ip:'192.168.1.126', name:'DVR CCTV Hikvision 8Ch', schoolArea:'DVR Central CCTV Sede Levarte', mac:'3C:1B:F8:41:AE:53', vendor:'Hikvision Digital', type:'server', vlan:30, status:'online', lat:3, jitter:0.4, loss:0, up:1400, down:220, bridgeTo:'192.168.1.253' },
   // Aulas 1° Medio (Pabellón A)
   { ip:'192.168.1.112', name:'Aula-1A-Docente', schoolArea:'Módulo A-15 · Sala 1° Medio A', mac:'70:85:C2:55:01:12', vendor:'Lenovo PC Docente', type:'pc', vlan:20, status:'online', lat:4, jitter:0.5, loss:0, up:290, down:810, bridgeTo:'192.168.1.253' },
   { ip:'192.168.1.114', name:'Aula-1B-Docente', schoolArea:'Módulo A-15 · Sala 1° Medio B', mac:'70:85:C2:55:01:14', vendor:'Lenovo PC Docente', type:'pc', vlan:20, status:'online', lat:4, jitter:0.5, loss:0, up:310, down:830, bridgeTo:'192.168.1.253' },
@@ -6523,7 +6523,7 @@ async function renderCamerasDashboard() {
     const levNvr = data.levarte_nvr_config || {};
     const levInput = $('levarte-nvr-ip-input');
     if (levInput && !levInput.matches(':focus')) {
-      levInput.value = levNvr.ip || '192.168.1.64';
+      levInput.value = levNvr.ip || '192.168.1.126';
     }
     const levBadge = $('levarte-nvr-status-badge');
     if (levBadge) {

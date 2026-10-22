@@ -13,6 +13,13 @@
       "type": "pc",
       "sede": "levarte",
       "vlan": 10
+    },
+    "192.168.1.126": {
+      "name": "DVR-CCTV-Hikvision",
+      "schoolArea": "DVR Central CCTV 8 Canales (Sede Levarte)",
+      "type": "server",
+      "sede": "levarte",
+      "vlan": 30
     }
   },
   "recintos": {}

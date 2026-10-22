@@ -24,8 +24,8 @@ echo [*] Probando conexion directa con Reloj Biometrico (192.168.1.201)...
 ping 192.168.1.201 -n 2
 
 echo.
-echo [*] Probando conexion con NVR Camaras CCTV (192.168.1.64)...
-ping 192.168.1.64 -n 2
+echo [*] Probando conexion con DVR Camaras CCTV (192.168.1.126)...
+ping 192.168.1.126 -n 2
 
 echo.
 echo ======================================================================

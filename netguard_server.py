@@ -257,7 +257,7 @@ LEVARTE_DEVICE_META = {
     "192.168.1.99": {"name": "GW-FortiGate (Router Principal)", "mac": "E0:23:FF:36:E1:55", "type": "router", "area": "Rack Central TI / Router & Firewall Principal"},
     "192.168.1.253": {"name": "Web-Switch-Levarte", "mac": "E8:94:F6:2F:85:46", "type": "router", "area": "Switch Distribución Central (Módulo A-15)"},
     "192.168.1.130": {"name": f"{LOCAL_HOSTNAME} (Mi PC · Consola TI)", "mac": "08:8F:C3:B8:0B:F7", "type": "pc", "area": "Puesto Soporte TI / Administrador EinsNet"},
-    "192.168.1.126": {"name": "Cam-Hikvision-Acceso", "mac": "3C:1B:F8:41:AE:53", "type": "pc", "area": "Cámara CCTV Seguridad / Acceso Calle Levarte"},
+    "192.168.1.126": {"name": "DVR-CCTV-Hikvision", "mac": "3C:1B:F8:41:AE:53", "type": "server", "area": "DVR Central CCTV 8 Canales / Sede Levarte"},
     "192.168.1.111": {"name": "SubDireccion", "mac": "08:8F:C3:B6:66:2C", "type": "pc", "area": "Subdirección Sede Levarte"},
     "192.168.1.115": {"name": "Inspectoria", "mac": "08:8F:C3:B6:65:38", "type": "pc", "area": "Inspectoría General (Módulo A-15)"},
     "192.168.1.118": {"name": "Secretaria", "mac": "08:8F:C3:B6:62:69", "type": "pc", "area": "Secretaría y Matrícula Levarte"},
@@ -502,7 +502,7 @@ BRANCH_DEVICES = {
     "192.168.1.99": [
         {"ip": "192.168.1.253", "mac": "E8:94:F6:2F:85:46", "name": "Web-Switch-Levarte (Switch Administrable L2/L3)", "type": "router"},
         {"ip": "192.168.1.130", "mac": "08:8F:C3:B8:0B:F7", "name": "maritimo-Admin (Consola Soporte TI EinsNet)", "type": "pc"},
-        {"ip": "192.168.1.126", "mac": "3C:1B:F8:41:AE:53", "name": "Cam-Hikvision-Acceso (CCTV Seguridad Calle Levarte)", "type": "pc"},
+        {"ip": "192.168.1.126", "mac": "3C:1B:F8:41:AE:53", "name": "DVR Hikvision 8 Canales (CCTV Levarte)", "type": "server"},
         {"ip": "192.168.9.99", "mac": "C4:72:95:99:09:99", "name": "Router-Backup-Levarte (Enlace Microondas)", "type": "router"},
     ],
     # 192.168.1.253: Web Switch Administrable · Distribución Aulas y Talleres Levarte
@@ -1349,7 +1349,7 @@ CAMERA_CREDS = _creds.get("camera_credentials", {"user": "admin", "password": "q
 # Configuración del NVR Centralizado Hikvision (Sede Lynch)
 NVR_CONFIG = {
     "ip": "192.168.80.64",
-    "alternate_ip": "192.168.1.64",
+    "alternate_ip": "192.168.1.126",
     "mac": "3C:1B:F8:40:AF:18",
     "http_port": 80,
     "rtsp_port": 554,
@@ -1360,11 +1360,11 @@ NVR_CONFIG = {
     "last_check": None
 }
 
-# Configuración del NVR / CCTV Hikvision (Sede Levarte · Módulo A-15)
+# Configuración del DVR / NVR Hikvision (Sede Levarte · Módulo A-15)
 LEVARTE_NVR_CONFIG = {
-    "ip": "192.168.1.64",
+    "ip": "192.168.1.126",
     "gateway": "192.168.1.99",
-    "mac": "BC:54:51:55:12:00",
+    "mac": "3C:1B:F8:41:AE:53",
     "http_port": 80,
     "rtsp_port": 554,
     "server_port": 8000,
@@ -1482,7 +1482,7 @@ CAMERAS_CATALOG = {
         "rtsp_substream": "rtsp://admin:qwert12345%2F@192.168.80.64:554/Streaming/Channels/402"
     },
 
-    # ── 8 CÁMARAS SEDE LEVARTE (MÓDULO A-15 · NVR 8 CANALES) ──
+    # ── 8 CÁMARAS SEDE LEVARTE (MÓDULO A-15 · DVR HIKVISION 8 CANALES EN 192.168.1.126) ──
     "cam-levarte-1": {
         "id": "cam-levarte-1",
         "ip": "192.168.1.126",
@@ -1491,7 +1491,7 @@ CAMERAS_CATALOG = {
         "name": "Cam 01 - Acceso Calle Levarte (Portón Frontal)",
         "sede": "levarte",
         "area": "CCTV Seguridad / Acceso Calle Levarte (Portón Frontal)",
-        "model": "Hikvision DarkFighter Bullet DS-2CD2T46G2-ISU",
+        "model": "Hikvision DVR Ch 1 (DS-7208 / 192.168.1.126)",
         "type": "bullet",
         "ptz_capable": True,
         "ir_capable": True,
@@ -1499,25 +1499,25 @@ CAMERAS_CATALOG = {
         "fps": 30,
         "bitrate": "4096 Kbps",
         "vlan": 30,
-        "mac": "BC:54:51:55:12:26",
+        "mac": "3C:1B:F8:41:AE:53",
         "mode": "day",
         "ptz": {"pan": -10, "tilt": 0, "zoom": 1.2},
         "recording": True,
         "motion_detected": False,
         "ports": [80, 554, 8000],
         "preset": "P1 - Portón Frontal",
-        "rtsp_stream": "rtsp://admin:qwert12345%2F@192.168.1.64:554/Streaming/Channels/101",
-        "rtsp_substream": "rtsp://admin:qwert12345%2F@192.168.1.64:554/Streaming/Channels/102"
+        "rtsp_stream": "rtsp://admin:qwert12345%2F@192.168.1.126:554/Streaming/Channels/101",
+        "rtsp_substream": "rtsp://admin:qwert12345%2F@192.168.1.126:554/Streaming/Channels/102"
     },
     "cam-levarte-2": {
         "id": "cam-levarte-2",
-        "ip": "192.168.9.50",
+        "ip": "192.168.1.126",
         "channel": 2,
         "channel_code": "201",
         "name": "Cam 02 - Domo Patio Interior Central",
         "sede": "levarte",
         "area": "CCTV Seguridad / Domo Patio Interior Levarte",
-        "model": "Hikvision Mini Dome DS-2CD2143G2-I",
+        "model": "Hikvision DVR Ch 2 (DS-7208 / 192.168.1.126)",
         "type": "dome_ptz",
         "ptz_capable": True,
         "ir_capable": True,
@@ -1525,25 +1525,25 @@ CAMERAS_CATALOG = {
         "fps": 30,
         "bitrate": "4096 Kbps",
         "vlan": 30,
-        "mac": "BC:54:51:99:09:50",
+        "mac": "3C:1B:F8:41:AE:53",
         "mode": "day",
         "ptz": {"pan": 0, "tilt": 10, "zoom": 1.0},
         "recording": True,
         "motion_detected": False,
         "ports": [80, 554, 8000],
         "preset": "P2 - Patio Central",
-        "rtsp_stream": "rtsp://admin:qwert12345%2F@192.168.1.64:554/Streaming/Channels/201",
-        "rtsp_substream": "rtsp://admin:qwert12345%2F@192.168.1.64:554/Streaming/Channels/202"
+        "rtsp_stream": "rtsp://admin:qwert12345%2F@192.168.1.126:554/Streaming/Channels/201",
+        "rtsp_substream": "rtsp://admin:qwert12345%2F@192.168.1.126:554/Streaming/Channels/202"
     },
     "cam-levarte-3": {
         "id": "cam-levarte-3",
-        "ip": "192.168.1.127",
+        "ip": "192.168.1.126",
         "channel": 3,
         "channel_code": "301",
         "name": "Cam 03 - Pasillo Central Aulas (1° y 2° Medio)",
         "sede": "levarte",
         "area": "Pabellón Aulas Módulo A-15 / Pasillo 1° y 2° Medio",
-        "model": "Hikvision Dome DS-2CD2123G0-I",
+        "model": "Hikvision DVR Ch 3 (DS-7208 / 192.168.1.126)",
         "type": "dome",
         "ptz_capable": True,
         "ir_capable": True,
@@ -1551,25 +1551,25 @@ CAMERAS_CATALOG = {
         "fps": 30,
         "bitrate": "3000 Kbps",
         "vlan": 30,
-        "mac": "BC:54:51:55:12:27",
+        "mac": "3C:1B:F8:41:AE:53",
         "mode": "day",
         "ptz": {"pan": 0, "tilt": 0, "zoom": 1.0},
         "recording": True,
         "motion_detected": False,
         "ports": [80, 554, 8000],
         "preset": "P3 - Pasillo Aulas",
-        "rtsp_stream": "rtsp://admin:qwert12345%2F@192.168.1.64:554/Streaming/Channels/301",
-        "rtsp_substream": "rtsp://admin:qwert12345%2F@192.168.1.64:554/Streaming/Channels/302"
+        "rtsp_stream": "rtsp://admin:qwert12345%2F@192.168.1.126:554/Streaming/Channels/301",
+        "rtsp_substream": "rtsp://admin:qwert12345%2F@192.168.1.126:554/Streaming/Channels/302"
     },
     "cam-levarte-4": {
         "id": "cam-levarte-4",
-        "ip": "192.168.9.51",
+        "ip": "192.168.1.126",
         "channel": 4,
         "channel_code": "401",
         "name": "Cam 04 - Multicancha Deportiva Techada",
         "sede": "levarte",
         "area": "Zona Deportiva y Recreación Techada Levarte",
-        "model": "Hikvision Bullet DS-2CD2043G2-I",
+        "model": "Hikvision DVR Ch 4 (DS-7208 / 192.168.1.126)",
         "type": "bullet",
         "ptz_capable": True,
         "ir_capable": True,
@@ -1577,25 +1577,25 @@ CAMERAS_CATALOG = {
         "fps": 30,
         "bitrate": "4096 Kbps",
         "vlan": 30,
-        "mac": "BC:54:51:99:09:51",
+        "mac": "3C:1B:F8:41:AE:53",
         "mode": "day",
         "ptz": {"pan": 10, "tilt": -10, "zoom": 1.0},
         "recording": True,
         "motion_detected": False,
         "ports": [80, 554, 8000],
         "preset": "P4 - Multicancha",
-        "rtsp_stream": "rtsp://admin:qwert12345%2F@192.168.1.64:554/Streaming/Channels/401",
-        "rtsp_substream": "rtsp://admin:qwert12345%2F@192.168.1.64:554/Streaming/Channels/402"
+        "rtsp_stream": "rtsp://admin:qwert12345%2F@192.168.1.126:554/Streaming/Channels/401",
+        "rtsp_substream": "rtsp://admin:qwert12345%2F@192.168.1.126:554/Streaming/Channels/402"
     },
     "cam-levarte-5": {
         "id": "cam-levarte-5",
-        "ip": "192.168.1.128",
+        "ip": "192.168.1.126",
         "channel": 5,
         "channel_code": "501",
         "name": "Cam 05 - Comedor & Casino Keuken Levarte",
         "sede": "levarte",
         "area": "Casino de Alumnos / Sector Keuken & Cocina (Sede Levarte)",
-        "model": "Hikvision Dome DS-2CD2143G2-I",
+        "model": "Hikvision DVR Ch 5 (DS-7208 / 192.168.1.126)",
         "type": "dome",
         "ptz_capable": True,
         "ir_capable": True,
@@ -1603,25 +1603,25 @@ CAMERAS_CATALOG = {
         "fps": 30,
         "bitrate": "4096 Kbps",
         "vlan": 30,
-        "mac": "BC:54:51:55:12:28",
+        "mac": "3C:1B:F8:41:AE:53",
         "mode": "day",
         "ptz": {"pan": 0, "tilt": 0, "zoom": 1.0},
         "recording": True,
         "motion_detected": False,
         "ports": [80, 554, 8000],
         "preset": "P5 - Comedor Casino",
-        "rtsp_stream": "rtsp://admin:qwert12345%2F@192.168.1.64:554/Streaming/Channels/501",
-        "rtsp_substream": "rtsp://admin:qwert12345%2F@192.168.1.64:554/Streaming/Channels/502"
+        "rtsp_stream": "rtsp://admin:qwert12345%2F@192.168.1.126:554/Streaming/Channels/501",
+        "rtsp_substream": "rtsp://admin:qwert12345%2F@192.168.1.126:554/Streaming/Channels/502"
     },
     "cam-levarte-6": {
         "id": "cam-levarte-6",
-        "ip": "192.168.9.52",
+        "ip": "192.168.1.126",
         "channel": 6,
         "channel_code": "601",
         "name": "Cam 06 - Acceso Pabellón Talleres Técnicos",
         "sede": "levarte",
         "area": "Pabellón Talleres / Acceso Taller Bajo Nivel y Polifuncional",
-        "model": "Hikvision Bullet DS-2CD2043G2-I",
+        "model": "Hikvision DVR Ch 6 (DS-7208 / 192.168.1.126)",
         "type": "bullet",
         "ptz_capable": True,
         "ir_capable": True,
@@ -1629,25 +1629,25 @@ CAMERAS_CATALOG = {
         "fps": 30,
         "bitrate": "4096 Kbps",
         "vlan": 30,
-        "mac": "BC:54:51:99:09:52",
+        "mac": "3C:1B:F8:41:AE:53",
         "mode": "day",
         "ptz": {"pan": 5, "tilt": -5, "zoom": 1.0},
         "recording": True,
         "motion_detected": False,
         "ports": [80, 554, 8000],
         "preset": "P6 - Acceso Talleres",
-        "rtsp_stream": "rtsp://admin:qwert12345%2F@192.168.1.64:554/Streaming/Channels/601",
-        "rtsp_substream": "rtsp://admin:qwert12345%2F@192.168.1.64:554/Streaming/Channels/602"
+        "rtsp_stream": "rtsp://admin:qwert12345%2F@192.168.1.126:554/Streaming/Channels/601",
+        "rtsp_substream": "rtsp://admin:qwert12345%2F@192.168.1.126:554/Streaming/Channels/602"
     },
     "cam-levarte-7": {
         "id": "cam-levarte-7",
-        "ip": "192.168.1.129",
+        "ip": "192.168.1.126",
         "channel": 7,
         "channel_code": "701",
         "name": "Cam 07 - Pasillo Inspectoría General & Secretaría",
         "sede": "levarte",
         "area": "Sector Administrativo / Inspectoría General y Secretaría",
-        "model": "Hikvision Dome DS-2CD2123G0-I",
+        "model": "Hikvision DVR Ch 7 (DS-7208 / 192.168.1.126)",
         "type": "dome",
         "ptz_capable": True,
         "ir_capable": True,
@@ -1655,25 +1655,25 @@ CAMERAS_CATALOG = {
         "fps": 30,
         "bitrate": "3800 Kbps",
         "vlan": 30,
-        "mac": "BC:54:51:55:12:29",
+        "mac": "3C:1B:F8:41:AE:53",
         "mode": "day",
         "ptz": {"pan": 0, "tilt": 0, "zoom": 1.0},
         "recording": True,
         "motion_detected": False,
         "ports": [80, 554, 8000],
         "preset": "P7 - Pasillo Inspectoría",
-        "rtsp_stream": "rtsp://admin:qwert12345%2F@192.168.1.64:554/Streaming/Channels/701",
-        "rtsp_substream": "rtsp://admin:qwert12345%2F@192.168.1.64:554/Streaming/Channels/702"
+        "rtsp_stream": "rtsp://admin:qwert12345%2F@192.168.1.126:554/Streaming/Channels/701",
+        "rtsp_substream": "rtsp://admin:qwert12345%2F@192.168.1.126:554/Streaming/Channels/702"
     },
     "cam-levarte-8": {
         "id": "cam-levarte-8",
-        "ip": "192.168.9.53",
+        "ip": "192.168.1.126",
         "channel": 8,
         "channel_code": "801",
         "name": "Cam 08 - Perímetro Posterior & Estacionamiento",
         "sede": "levarte",
         "area": "Perímetro Trasero / Portón Estacionamiento Docente y Salida Emergencia",
-        "model": "Hikvision DarkFighter Bullet DS-2CD2T46G2-ISU",
+        "model": "Hikvision DVR Ch 8 (DS-7208 / 192.168.1.126)",
         "type": "bullet",
         "ptz_capable": True,
         "ir_capable": True,
@@ -1681,15 +1681,15 @@ CAMERAS_CATALOG = {
         "fps": 30,
         "bitrate": "4096 Kbps",
         "vlan": 30,
-        "mac": "BC:54:51:99:09:53",
+        "mac": "3C:1B:F8:41:AE:53",
         "mode": "day",
         "ptz": {"pan": -15, "tilt": -5, "zoom": 1.1},
         "recording": True,
         "motion_detected": False,
         "ports": [80, 554, 8000],
         "preset": "P8 - Portón Estacionamiento",
-        "rtsp_stream": "rtsp://admin:qwert12345%2F@192.168.1.64:554/Streaming/Channels/801",
-        "rtsp_substream": "rtsp://admin:qwert12345%2F@192.168.1.64:554/Streaming/Channels/802"
+        "rtsp_stream": "rtsp://admin:qwert12345%2F@192.168.1.126:554/Streaming/Channels/801",
+        "rtsp_substream": "rtsp://admin:qwert12345%2F@192.168.1.126:554/Streaming/Channels/802"
     }
 }
 
@@ -2771,7 +2771,8 @@ class NetGuardRequestHandler(SimpleHTTPRequestHandler):
                 if is_lynch:
                     is_online = (cid in LIVE_HOSTS_CACHE and LIVE_HOSTS_CACHE[cid].get("is_online", True)) or (NVR_CONFIG["status"] == "online")
                 else:
-                    is_online = (cid in LIVE_HOSTS_CACHE and LIVE_HOSTS_CACHE[cid].get("is_online", True)) or (LEVARTE_NVR_CONFIG["status"] == "online")
+                    cam_ip = cdata.get("ip", "192.168.1.126")
+                    is_online = (cid in LIVE_HOSTS_CACHE and LIVE_HOSTS_CACHE[cid].get("is_online", True)) or (cam_ip in LIVE_HOSTS_CACHE and LIVE_HOSTS_CACHE[cam_ip].get("is_online", True)) or (LEVARTE_NVR_CONFIG["status"] == "online")
                 lat = LIVE_HOSTS_CACHE.get(cdata.get("ip"), {}).get("ping_ms", 4 if is_lynch else 12)
                 cams_list.append({
                     **cdata,
@@ -4382,6 +4383,7 @@ class NetGuardRequestHandler(SimpleHTTPRequestHandler):
                     for cid in [f"cam-levarte-{i}" for i in range(1, 9)]:
                         if cid in CAMERAS_CATALOG:
                             ch_num = CAMERAS_CATALOG[cid].get("channel", 1)
+                            CAMERAS_CATALOG[cid]["ip"] = new_ip
                             CAMERAS_CATALOG[cid]["rtsp_stream"] = f"rtsp://{new_ip}:554/Streaming/Channels/{ch_num}01"
                             CAMERAS_CATALOG[cid]["rtsp_substream"] = f"rtsp://{new_ip}:554/Streaming/Channels/{ch_num}02"
 

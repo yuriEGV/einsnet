@@ -31,12 +31,12 @@ Test-Connection -ComputerName 192.168.1.201 -Count 2 -Quiet | ForEach-Object {
     }
 }
 
-Write-Host "[*] Comprobando ping a NVR Camaras CCTV (192.168.1.64)..." -ForegroundColor Yellow
-Test-Connection -ComputerName 192.168.1.64 -Count 2 -Quiet | ForEach-Object {
+Write-Host "[*] Comprobando ping a DVR Camaras CCTV (192.168.1.126)..." -ForegroundColor Yellow
+Test-Connection -ComputerName 192.168.1.126 -Count 2 -Quiet | ForEach-Object {
     if ($_) {
-        Write-Host "  [OK] 192.168.1.64 RESPONDE CORRECTAMENTE AL PING." -ForegroundColor Green
+        Write-Host "  [OK] 192.168.1.126 RESPONDE CORRECTAMENTE AL PING." -ForegroundColor Green
     } else {
-        Write-Host "  [!] 192.168.1.64 no respondio al ping en este momento." -ForegroundColor Red
+        Write-Host "  [!] 192.168.1.126 no respondio al ping en este momento." -ForegroundColor Red
     }
 }
 
