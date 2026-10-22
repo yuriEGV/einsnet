@@ -35,7 +35,7 @@ const LYNCH_SEED = [
   { ip:'192.168.80.17', name:'TP-SW-06', schoolArea:'Logística Operaciones Portuarias', mac:'84:D8:1B:ED:C7:9D', vendor:'TP-LINK TECHNOLOGIES',        type:'router',  vlan:20, status:'online',  lat:6,  jitter:1.0, loss:0, up:290, down:640  },
   { ip:'192.168.80.20', name:'TP-SW-07', schoolArea:'Pabellón de Clases Norte', mac:'F8:1A:67:99:41:79', vendor:'TP-LINK TECHNOLOGIES',        type:'router',  vlan:20, status:'online',  lat:4,  jitter:0.7, loss:0, up:510, down:1100 },
   { ip:'192.168.80.21', name:'HP3B259E', schoolArea:'Impresora Central Administración', mac:'38:22:E2:3B:25:9E', vendor:'HP Inc.',                     type:'printer', vlan:30, status:'online',  lat:12, jitter:2.1, loss:0, up:45,  down:120, bridgeTo:'192.168.80.1' },
-  { ip:'192.168.80.22', name:'maritimo (Mi PC)', schoolArea:'Soporte TI / Admin Central', mac:'08:8F:C3:B8:0B:F7', vendor:'ASUSTeK COMPUTER INC.',       type:'pc',      vlan:10, status:'online',  lat:6,  jitter:0.9, loss:0, up:2400,down:6800, user:'maritimo\\maritimo13', bridgeTo:'192.168.80.1' },
+  { ip:'192.168.80.22', name:'Informatica (Mi PC)', schoolArea:'Soporte TI / Admin Central', mac:'08:8F:C3:B8:0B:F7', vendor:'ASUSTeK COMPUTER INC.',       type:'pc',      vlan:10, status:'online',  lat:6,  jitter:0.9, loss:0, up:2400,down:6800, user:'Informatica\\Admin', bridgeTo:'192.168.80.1' },
   { ip:'192.168.80.24', name:'Apple-Host-24', schoolArea:'Lab. Química (Mac Docente)', mac:'14:CB:19:72:AA:0E', vendor:'Apple, Inc.',                 type:'pc',      vlan:20, status:'online',  lat:7,  jitter:1.0, loss:0, up:520, down:1400, bridgeTo:'192.168.80.13' },
   { ip:'192.168.80.47', name:'yuri-ThinkPad', schoolArea:'Servidores TI / ThinkPad Yuri', mac:'F8:75:A4:DE:E9:12', vendor:'LCFC(HeFei) Electronics',     type:'server',  vlan:10, status:'online',  lat:14, jitter:3.2, loss:0, up:3100,down:8900, services:['HTTP:80','HTTPS:443'], bridgeTo:'192.168.80.1' },
   { ip:'192.168.80.51', name:'Workstation-51', schoolArea:'Formación Profesional (Puesto 1)', mac:'08:8F:C3:B6:65:0E', vendor:'Dispositivo LAN',             type:'pc',      vlan:30, status:'online',  lat:9,  jitter:1.5, loss:0, up:80,  down:200, bridgeTo:'192.168.80.12' },
@@ -124,7 +124,7 @@ const LYNCH_SEED = [
 const LEVARTE_SEED = [
   { ip:'192.168.1.99',  name:'GW-FortiGate (Levarte)', schoolArea:'Gabinete TI / Router Central FortiGate', mac:'E8:1D:A8:10:20:99', vendor:'Fortinet, Inc.', type:'router', vlan:1, status:'online', lat:1, jitter:0.2, loss:0, up:2100, down:5800 },
   { ip:'192.168.1.253', name:'Web-Switch-Levarte', schoolArea:'Distribuidor Central L2/L3 (Módulo A-15)', mac:'B0:BE:76:88:99:AA', vendor:'Switch Administrable L2/L3', type:'router', vlan:1, status:'online', lat:2, jitter:0.3, loss:0, up:1800, down:4500, bridgeTo:'192.168.1.99' },
-  { ip:'192.168.1.130', name:'maritimo (Mi PC · Admin)', schoolArea:'Puesto Técnico TI / Consola Central', mac:'08:8F:C3:B8:0B:F7', vendor:'ASUSTeK COMPUTER INC.', type:'pc', vlan:10, status:'online', lat:1, jitter:0.1, loss:0, up:3400, down:8900, user:'maritimo\\maritimo13', bridgeTo:'192.168.1.253' },
+  { ip:'192.168.1.130', name:'Informatica (Mi PC · Admin)', schoolArea:'Puesto Técnico TI / Consola Central', mac:'08:8F:C3:B8:0B:F7', vendor:'ASUSTeK COMPUTER INC.', type:'pc', vlan:10, status:'online', lat:1, jitter:0.1, loss:0, up:3400, down:8900, user:'Informatica\\Admin', bridgeTo:'192.168.1.253' },
   { ip:'192.168.1.111', name:'SubDireccion', schoolArea:'SubDirección Pedagógica Sede Levarte', mac:'70:85:C2:55:11:11', vendor:'Lenovo Corp.', type:'pc', vlan:10, status:'online', lat:3, jitter:0.4, loss:0, up:450, down:1200, bridgeTo:'192.168.1.253' },
   { ip:'192.168.1.115', name:'Inspectoria General', schoolArea:'Inspectoría General Módulo A-15', mac:'70:85:C2:55:11:15', vendor:'Lenovo Corp.', type:'pc', vlan:10, status:'online', lat:3, jitter:0.4, loss:0, up:620, down:1800, bridgeTo:'192.168.1.253' },
   { ip:'192.168.1.118', name:'Secretaria y Matriculas', schoolArea:'Secretaría de Dirección y Matrículas', mac:'30:9C:23:55:11:18', vendor:'HP Inc.', type:'pc', vlan:10, status:'online', lat:4, jitter:0.5, loss:0, up:390, down:950, bridgeTo:'192.168.1.253' },
@@ -333,7 +333,13 @@ const INITIAL_DEVICE_LIST = [...combinedSeeds];
 customStored.forEach(cd => {
   const existing = INITIAL_DEVICE_LIST.find(d => d.ip === cd.ip);
   if (existing) {
-    if (cd.name) existing.name = cd.name;
+    if (cd.name) {
+      if (cd.name === 'maritimo (Mi PC)' || cd.name === 'maritimo (Mi PC · Admin)') {
+        existing.name = 'Informatica (Mi PC)';
+      } else {
+        existing.name = cd.name;
+      }
+    }
     // Discard old generic placeholder areas from previous versions
     const staleAreas = ['DataCenter / Servidores TI', 'Pañol / Bodega Técnica', 'CCTV / Cámaras de Seguridad'];
     if (cd.schoolArea && !staleAreas.includes(cd.schoolArea)) {
@@ -1138,7 +1144,7 @@ function drawMap(){
   // ── NODES ──
   visible.forEach(d=>{
     const r=getNodeRadius(d);
-    const isMe = d.ip === '192.168.80.22';
+    const isMe = d.ip === '192.168.80.22' || d.ip === '192.168.1.130';
     const isGio = d.ip === '192.168.80.70';
     const isQuarantined = !!(d.isIsolated || d.blocked || (state.quarantine && (state.quarantine.isolatedHosts?.[d.ip] || state.quarantine.isolatedRouters?.[d.ip])));
     const baseColor=isQuarantined?'#ef4444':(d.blocked?'#4b5563':(d.threat!=='none'&&d.threat!=='low'?'#ef4444':(isMe?'#f59e0b':isGio?'#06b6d4':typeColor(d.type))));
@@ -1244,16 +1250,17 @@ function drawMap(){
         ctx.font='bold 8px Inter,sans-serif';
         ctx.fillStyle='#f59e0b';
         ctx.textAlign='center';
-        const topTag = (state.mapSedeView === 'levarte') ? '⭐ SOPORTE TI CENTRAL' : 'TU EQUIPO · ADMIN';
+        const topTag = (state.mapSedeView === 'levarte' && d.ip === '192.168.80.22') ? '⭐ SOPORTE TI CENTRAL (LYNCH)' : 'TU EQUIPO · ADMIN';
         ctx.fillText(topTag, d.x, d.y - r - 6);
 
         ctx.font='bold 10.5px "JetBrains Mono",monospace';
         ctx.fillStyle='#fbbf24';
-        ctx.fillText('192.168.80.22', d.x, d.y + r + 13);
+        ctx.fillText(d.ip, d.x, d.y + r + 13);
 
         ctx.font='bold 11px Inter,sans-serif';
         ctx.fillStyle='#fef08a';
-        const nameTag = (state.mapSedeView === 'levarte') ? 'maritimo (Soporte TI Lynch)' : 'maritimo (Mi PC)';
+        const displayName = d.name || 'Informatica';
+        const nameTag = (state.mapSedeView === 'levarte' && d.ip === '192.168.80.22' && !displayName.includes('Lynch')) ? `${displayName} (Lynch)` : displayName;
         ctx.fillText(nameTag, d.x, d.y + r + 26);
       } else if(isGio){
         // Dedicated prominent badge for Gio
@@ -1264,11 +1271,11 @@ function drawMap(){
 
         ctx.font='bold 10.5px "JetBrains Mono",monospace';
         ctx.fillStyle='#38bdf8';
-        ctx.fillText('192.168.80.70', d.x, d.y + r + 13);
+        ctx.fillText(d.ip, d.x, d.y + r + 13);
 
         ctx.font='bold 11px Inter,sans-serif';
         ctx.fillStyle='#bae6fd';
-        ctx.fillText('Gio', d.x, d.y + r + 26);
+        ctx.fillText(d.name || 'Gio', d.x, d.y + r + 26);
       } else {
         const isOffline = d.status === 'offline';
         ctx.textAlign = 'center';
@@ -1969,15 +1976,7 @@ function showNodePopup(d){
   const btnRename = $('pa-rename');
   if (btnRename) {
     btnRename.onclick = () => {
-      const cur = d.schoolArea || d.name;
-      const val = prompt(`Personalizar Nombre o Área Escolar para ${d.ip}:\n(Ej: "Laboratorio de Química", "Gastronomía", "Unidad Formación Profesional")`, cur);
-      if (val !== null && val.trim() !== '') {
-        d.schoolArea = val.trim();
-        saveCustomDevice(d);
-        showNodePopup(d);
-        if (state.currentView === 'devices') renderDevicesTable();
-        toast(`✅ Área asignada: "${d.schoolArea}" para ${d.ip}`, 'success');
-      }
+      openEditDeviceModal(d);
     };
   }
   $('pa-ping').onclick=()=>{ quickTool('ping',d.ip); };
@@ -2104,6 +2103,7 @@ function renderDevicesTable(){
       <td>${d.status==='online'&&!d.blocked?`<span style="color:#10b981">↑${fmt(d.up)}</span><br><span style="color:#60a5fa">↓${fmt(d.down)}</span>`:'—'}</td>
       <td><span class="risk-badge risk-${d.blocked?'high':d.threat==='none'?'low':d.threat}">${d.blocked?'EN CUARENTENA':d.threat==='none'?'LIMPIO':d.threat.toUpperCase()}</span></td>
       <td class="td-actions">
+        <button class="td-btn edit-btn" onclick="openEditDeviceModalByIp('${d.ip}')" title="✏️ Renombrar y Configurar este Equipo o Router" style="color:#38bdf8;border-color:rgba(56,189,248,0.4);">✏️</button>
         <button class="td-btn msg-btn" onclick="sendDirectMessageToDevice('${d.ip}', '${(d.schoolArea || d.name).replace(/'/g, "\\'")}')" title="✉️ Enviar Mensaje Directo a este Equipo">✉️</button>
         ${d.blocked
           ? `<button class="td-btn unblock-btn" onclick="unblockDevice(${d.id})" title="Desbloquear este dispositivo">🟢</button><button class="td-btn" onclick="initiateBlock(state.devices[${d.id}])" title="Enviar advertencia">💬</button>`
@@ -3738,6 +3738,15 @@ async function syncLiveHostStatus() {
         }
         if (data.hosts && data.hosts[d.ip]) {
           const h = data.hosts[d.ip];
+          if (h.name && h.name !== d.name) {
+            d.name = h.name;
+          }
+          if (h.schoolArea && h.schoolArea !== d.schoolArea) {
+            d.schoolArea = h.schoolArea;
+          }
+          if (h.type && h.type !== d.type) {
+            d.type = h.type;
+          }
           d.lat = h.ping_ms || d.lat;
           d.total_mb = h.total_mb || d.total_mb;
           d.rx_mb = h.rx_mb || d.rx_mb;
@@ -3751,6 +3760,19 @@ async function syncLiveHostStatus() {
         d.activity = '🔴 Desconectado / Apagado';
       }
     });
+
+    // Sincronizar overrides universales guardados en el backend
+    if (data.overrides && data.overrides.devices) {
+      Object.entries(data.overrides.devices).forEach(([oip, odata]) => {
+        const target = state.devices.find(dev => dev.ip === oip);
+        if (target) {
+          if (odata.name) target.name = odata.name;
+          if (odata.schoolArea) target.schoolArea = odata.schoolArea;
+          if (odata.type) target.type = odata.type;
+          if (odata.vlan) target.vlan = odata.vlan;
+        }
+      });
+    }
 
     // Actualizar contadores del header y del segmented button respetando la sede activa
     updateTopologyCounters();
@@ -4994,6 +5016,7 @@ function init(){
   initEmergencyBroadcast();
   initRouterContextMenu();
   initAddHostModal();
+  initEditDeviceModal();
   setupDeviceSearch();
   initModalSubyugadasEvents();
   initAntitheftModule();
@@ -5328,8 +5351,9 @@ async function renderPlanoLynch() {
         <div class="cad-room ${isRoomHighlighted ? 'highlight-target' : ''}" id="${rec.id}" style="--room-color:${rec.color};">
           <div class="cad-room-top">
             <div>
-              <div class="cad-room-name">
+              <div class="cad-room-name" style="display:flex;align-items:center;gap:6px;">
                 <span style="color:${rec.color};">▪</span> ${rec.nombre}
+                <button type="button" class="btn-tool-sm" onclick="openEditRecintoModal('${rec.id}', '${escapeHtml(rec.nombre)}', '${escapeHtml(rec.rotulo_cad)}', '${escapeHtml(rec.descripcion || '')}')" style="padding:2px 6px;font-size:10px;margin-left:6px;background:rgba(192,132,252,0.15);border:1px solid #c084fc;color:#c084fc;cursor:pointer;border-radius:4px;" title="✏️ Renombrar Sala / Recinto en el Plano">✏️</button>
               </div>
               <span class="cad-room-cad-tag" style="--room-color:${rec.color};">${rec.rotulo_cad}</span>
             </div>
@@ -5446,6 +5470,9 @@ function selectPlanoDevice(ip, roomId, planoData) {
       </div>
 
       <div class="psd-actions">
+        <button class="psd-btn" id="psd-btn-edit-dev" style="background:rgba(56,189,248,0.18);border:1px solid #38bdf8;color:#38bdf8;font-weight:700;">
+          ✏️ Renombrar este Equipo / Router
+        </button>
         <button class="psd-btn psd-btn-msg" id="psd-btn-send-msg">
           💬 Enviar Mensaje a este Equipo (${dev.ip})
         </button>
@@ -5457,6 +5484,10 @@ function selectPlanoDevice(ip, roomId, planoData) {
         </button>
       </div>
     `;
+
+    $('psd-btn-edit-dev')?.addEventListener('click', () => {
+      openEditDeviceModal(dev);
+    });
 
     $('psd-btn-send-msg')?.addEventListener('click', () => {
       openEmergencyModal({ targetIp: dev.ip, targetName: dev.name });
@@ -6878,6 +6909,208 @@ if (document.readyState === 'loading') {
 window.addEventListener('resize',()=>{ resizeCanvas(); });
 window.state=state; window.quickTool=quickTool; window.renderControlPanel=renderControlPanel;
 window.renderBlockedDevicesList=renderBlockedDevicesList;
+
+// ═══════════════════════════════════════════════════════
+//  MODAL DE EDICIÓN Y RENOMBRADO UNIVERSAL (AMBAS SEDES)
+// ═══════════════════════════════════════════════════════
+function openEditDeviceModal(dev) {
+  if (!dev) return;
+  const modal = $('modal-edit-device');
+  if (!modal) return;
+
+  $('edit-dev-ip').value = dev.ip;
+  $('edit-dev-ip-display').textContent = dev.ip;
+
+  const devSede = dev.sede || getDeviceSede(dev);
+  const badgeEl = $('edit-dev-sede-badge');
+  if (badgeEl) {
+    badgeEl.className = `sede-badge ${devSede === 'levarte' ? 'sede-levarte' : 'sede-lynch'}`;
+    badgeEl.textContent = devSede === 'levarte' ? '🏢 Sede Levarte' : '🏫 Sede Lynch';
+  }
+
+  $('edit-dev-name').value = dev.name || '';
+  $('edit-dev-area').value = dev.schoolArea || '';
+  $('edit-dev-type').value = dev.type || 'pc';
+  $('edit-dev-vlan').value = String(dev.vlan || 1);
+
+  modal.classList.remove('hidden');
+}
+window.openEditDeviceModal = openEditDeviceModal;
+
+window.openEditDeviceModalByIp = function(ip) {
+  const dev = state.devices.find(d => d.ip === ip);
+  if (dev) {
+    openEditDeviceModal(dev);
+  }
+};
+
+function closeEditDeviceModal() {
+  const modal = $('modal-edit-device');
+  if (modal) modal.classList.add('hidden');
+}
+window.closeEditDeviceModal = closeEditDeviceModal;
+
+async function detectRealHostname() {
+  const ip = $('edit-dev-ip').value;
+  const btn = $('btn-detect-real-hostname');
+  if (!ip) return;
+
+  const originalText = btn.innerHTML;
+  btn.innerHTML = '⏳ Consultando...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/device/detect-hostname', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ip })
+    });
+    const data = await res.json();
+    if (data.success && data.hostname) {
+      $('edit-dev-name').value = data.hostname;
+      toast(`✅ Nombre real detectado (${data.source}): "${data.hostname}"`, 'success');
+    } else {
+      toast(`⚠️ No se obtuvo respuesta NetBIOS/DNS para ${ip}. Puedes ingresar el nombre manualmente.`, 'warning');
+    }
+  } catch (err) {
+    toast(`⚠️ Error al consultar nombre de red: ${err.message}`, 'error');
+  } finally {
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+  }
+}
+
+async function saveEditDevice() {
+  const ip = $('edit-dev-ip').value;
+  const name = $('edit-dev-name').value.trim();
+  const area = $('edit-dev-area').value.trim();
+  const devType = $('edit-dev-type').value;
+  const vlan = parseInt($('edit-dev-vlan').value, 10) || 1;
+
+  if (!ip || !name) {
+    toast('⚠️ El nombre del dispositivo no puede estar vacío', 'warning');
+    return;
+  }
+
+  const dev = state.devices.find(d => d.ip === ip);
+  if (dev) {
+    dev.name = name;
+    dev.schoolArea = area;
+    dev.type = devType;
+    dev.vlan = vlan;
+    saveCustomDevice(dev);
+  }
+
+  // Si es la consola admin (192.168.80.22 o 192.168.1.130), sincronizar ambas sedes
+  if (ip === '192.168.80.22') {
+    const levAdmin = state.devices.find(d => d.ip === '192.168.1.130');
+    if (levAdmin) {
+      levAdmin.name = name;
+      saveCustomDevice(levAdmin);
+    }
+  } else if (ip === '192.168.1.130') {
+    const lynchAdmin = state.devices.find(d => d.ip === '192.168.80.22');
+    if (lynchAdmin) {
+      lynchAdmin.name = name;
+      saveCustomDevice(lynchAdmin);
+    }
+  }
+
+  try {
+    const res = await fetch('/api/device/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ip,
+        name,
+        schoolArea: area,
+        type: devType,
+        vlan,
+        sede: dev ? getDeviceSede(dev) : undefined
+      })
+    });
+    const result = await res.json();
+    if (result.success) {
+      toast(`✅ Guardado en red y persistido: "${name}" (${ip})`, 'success');
+    }
+  } catch (err) {
+    console.warn('Error al guardar en servidor:', err);
+    toast(`⚠️ Guardado localmente en navegador`, 'warning');
+  }
+
+  closeEditDeviceModal();
+  if (dev) showNodePopup(dev);
+  if (state.currentView === 'devices') renderDevicesTable();
+  if (state.currentView === 'plano-lynch') renderPlanoLynch();
+}
+
+// ═══════════════════════════════════════════════════════
+//  MODAL RENOMBRAR RECINTO / SALA ARQUITECTÓNICA
+// ═══════════════════════════════════════════════════════
+function openEditRecintoModal(recId, nombre, rotulo, desc) {
+  const modal = $('modal-edit-recinto');
+  if (!modal) return;
+  $('edit-recinto-id').value = recId;
+  $('edit-recinto-nombre').value = nombre || '';
+  $('edit-recinto-rotulo').value = rotulo || '';
+  $('edit-recinto-desc').value = desc || '';
+  modal.classList.remove('hidden');
+}
+window.openEditRecintoModal = openEditRecintoModal;
+
+function closeEditRecintoModal() {
+  const modal = $('modal-edit-recinto');
+  if (modal) modal.classList.add('hidden');
+}
+window.closeEditRecintoModal = closeEditRecintoModal;
+
+async function saveEditRecinto() {
+  const recId = $('edit-recinto-id').value;
+  const nombre = $('edit-recinto-nombre').value.trim();
+  const rotulo = $('edit-recinto-rotulo').value.trim();
+  const desc = $('edit-recinto-desc').value.trim();
+
+  if (!recId || !nombre) {
+    toast('⚠️ El nombre de la sala es obligatorio', 'warning');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/recinto/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        recinto_id: recId,
+        nombre: nombre,
+        rotulo_cad: rotulo,
+        descripcion: desc
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      toast(`✅ Sala actualizada en plano: "${nombre}"`, 'success');
+      planoState.dataLynch = null;
+      planoState.dataLevarte = null;
+      renderPlanoLynch();
+    }
+  } catch (err) {
+    toast(`⚠️ Error al actualizar recinto: ${err.message}`, 'error');
+  }
+
+  closeEditRecintoModal();
+}
+
+function initEditDeviceModal() {
+  $('btn-edit-device-close')?.addEventListener('click', closeEditDeviceModal);
+  $('btn-edit-device-cancel')?.addEventListener('click', closeEditDeviceModal);
+  $('btn-edit-device-save')?.addEventListener('click', saveEditDevice);
+  $('btn-detect-real-hostname')?.addEventListener('click', detectRealHostname);
+
+  // Recinto modal
+  $('btn-edit-recinto-close')?.addEventListener('click', closeEditRecintoModal);
+  $('btn-edit-recinto-cancel')?.addEventListener('click', closeEditRecintoModal);
+  $('btn-edit-recinto-save')?.addEventListener('click', saveEditRecinto);
+}
 
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init);
 else init();

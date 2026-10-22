@@ -59,6 +59,43 @@ ISOLATED_HOSTS = {}      # { ip: { ip, name, parent_router, reason, isolated_at,
 ISOLATED_ROUTERS = {}    # { router_ip: { ip, name, area, subnet, reason, isolated_at, affected_count, affected_hosts, admin } }
 QUARANTINE_AUDIT_LOG = []
 
+# ── OVERRIDES Y RENOMBRADO DINÁMICO DE EQUIPOS, ROUTERS Y PLANOS ──
+DEVICE_OVERRIDES_FILE = os.path.join(APP_DIR, "device_overrides.json")
+DEVICE_OVERRIDES = {"devices": {}, "recintos": {}}
+
+def get_local_hostname():
+    """Detecta dinámicamente el nombre real de equipo configurado en Windows"""
+    try:
+        h = socket.gethostname().strip()
+        if h:
+            return h
+    except Exception:
+        pass
+    return os.environ.get('COMPUTERNAME', 'Informatica').strip()
+
+def load_device_overrides():
+    global DEVICE_OVERRIDES
+    if os.path.exists(DEVICE_OVERRIDES_FILE):
+        try:
+            with open(DEVICE_OVERRIDES_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, dict):
+                    DEVICE_OVERRIDES["devices"] = data.get("devices", {})
+                    DEVICE_OVERRIDES["recintos"] = data.get("recintos", {})
+        except Exception as e:
+            print(f"[-] Error cargando {DEVICE_OVERRIDES_FILE}: {e}")
+
+def save_device_overrides():
+    try:
+        with open(DEVICE_OVERRIDES_FILE, "w", encoding="utf-8") as f:
+            json.dump(DEVICE_OVERRIDES, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        print(f"[-] Error guardando {DEVICE_OVERRIDES_FILE}: {e}")
+
+load_device_overrides()
+LOCAL_HOSTNAME = get_local_hostname()
+
+
 def get_my_ip():
     """Detecta dinámicamente la IP local del equipo, priorizando interfaces físicas escolares sobre VPNs o adaptadores virtuales"""
     candidates = []
@@ -219,7 +256,7 @@ load_inter_sede_chat()
 LEVARTE_DEVICE_META = {
     "192.168.1.99": {"name": "GW-FortiGate (Router Principal)", "mac": "E0:23:FF:36:E1:55", "type": "router", "area": "Rack Central TI / Router & Firewall Principal"},
     "192.168.1.253": {"name": "Web-Switch-Levarte", "mac": "E8:94:F6:2F:85:46", "type": "router", "area": "Switch Distribución Central (Módulo A-15)"},
-    "192.168.1.130": {"name": "maritimo (Mi PC · Consola TI)", "mac": "08:8F:C3:B8:0B:F7", "type": "pc", "area": "Puesto Soporte TI / Administrador EinsNet"},
+    "192.168.1.130": {"name": f"{LOCAL_HOSTNAME} (Mi PC · Consola TI)", "mac": "08:8F:C3:B8:0B:F7", "type": "pc", "area": "Puesto Soporte TI / Administrador EinsNet"},
     "192.168.1.126": {"name": "Cam-Hikvision-Acceso", "mac": "3C:1B:F8:41:AE:53", "type": "pc", "area": "Cámara CCTV Seguridad / Acceso Calle Levarte"},
     "192.168.1.111": {"name": "SubDireccion", "mac": "08:8F:C3:B6:66:2C", "type": "pc", "area": "Subdirección Sede Levarte"},
     "192.168.1.115": {"name": "Inspectoria", "mac": "08:8F:C3:B6:65:38", "type": "pc", "area": "Inspectoría General (Módulo A-15)"},
@@ -401,8 +438,17 @@ MAC_VENDORS = {
 
 def identify_device(ip, mac, host_sede):
     """Identifica el tipo de equipo, fabricante, rol y actividad en la red escolar"""
-    if ip == MY_IP:
-        return "maritimo (Mi PC · Consola TI)", "pc", "⭐ Consola Maestra Administrador"
+    # 1. Prioridad: Overrides personalizados guardados desde la plataforma
+    if ip in DEVICE_OVERRIDES.get("devices", {}):
+        dev = DEVICE_OVERRIDES["devices"][ip]
+        return dev.get("name", ip), dev.get("type", "pc"), dev.get("schoolArea", "Dispositivo Personalizado")
+
+    # 2. Tu equipo (Consola Administrador) - Usa dinámicamente el hostname real de Windows
+    if ip == MY_IP or ip in ("192.168.80.22", "192.168.1.130"):
+        local_h = get_local_hostname()
+        sede_tag = "Lynch" if ip.startswith("192.168.80.") else "Levarte"
+        return f"{local_h} (Mi PC)", "pc", f"Soporte TI / Admin Central ({sede_tag})"
+
     if host_sede == "levarte" and ip in LEVARTE_DEVICE_META:
         meta = LEVARTE_DEVICE_META[ip]
         return meta.get("name"), meta.get("type", "pc"), meta.get("area", "Sede Levarte")
@@ -618,7 +664,7 @@ LYNCH_CORE_DEVICES = [
     {"ip": "192.168.80.17", "name": "TP-SW-06", "mac": "84:D8:1B:ED:C7:9D", "type": "router", "area": "Logística Operaciones Portuarias"},
     {"ip": "192.168.80.20", "name": "TP-SW-07", "mac": "F8:1A:67:99:41:79", "type": "router", "area": "Pabellón de Clases Norte"},
     {"ip": "192.168.80.21", "name": "HP3B259E", "mac": "38:22:E2:3B:25:9E", "type": "printer", "area": "Impresora Central Administración"},
-    {"ip": "192.168.80.22", "name": "maritimo (Mi PC)", "mac": "08:8F:C3:B8:0B:F7", "type": "pc", "area": "Soporte TI / Admin Central"},
+    {"ip": "192.168.80.22", "name": f"{LOCAL_HOSTNAME} (Mi PC)", "mac": "08:8F:C3:B8:0B:F7", "type": "pc", "area": "Soporte TI / Admin Central"},
     {"ip": "192.168.80.24", "name": "Apple-Host-24", "mac": "14:CB:19:72:AA:0E", "type": "pc", "area": "Lab. Química (Mac Docente)"},
     {"ip": "192.168.80.47", "name": "yuri-ThinkPad", "mac": "F8:75:A4:DE:E9:12", "type": "server", "area": "Servidores TI / ThinkPad Yuri"},
     {"ip": "192.168.80.51", "name": "Workstation-51", "mac": "08:8F:C3:B6:65:0E", "type": "pc", "area": "Formación Profesional (Puesto 1)"},
@@ -668,6 +714,16 @@ for _rip, _blist in BRANCH_DEVICES.items():
                     "activity": "⚡ Especialidad Activa",
                     "sede": "lynch"
                 }
+
+# Aplicar overrides guardados en device_overrides.json al iniciar
+for _o_ip, _o_data in DEVICE_OVERRIDES.get("devices", {}).items():
+    if _o_ip in LIVE_HOSTS_CACHE:
+        if _o_data.get("name"):
+            LIVE_HOSTS_CACHE[_o_ip]["name"] = _o_data["name"]
+        if _o_data.get("schoolArea"):
+            LIVE_HOSTS_CACHE[_o_ip]["schoolArea"] = _o_data["schoolArea"]
+        if _o_data.get("type"):
+            LIVE_HOSTS_CACHE[_o_ip]["type"] = _o_data["type"]
 
 # ═══════════════════════════════════════════════════════════════════════════
 # CATÁLOGO OFICIAL DE ROUTERS Y SWITCHES DE AMBAS SEDES (KILL-SWITCH REGISTRY)
@@ -2445,6 +2501,24 @@ def dispatch_dual_alert(title, message, target_ips=None, sender_ip=None, is_emer
     """Despacha alerta tanto por UDP broadcast como por mensajería nativa en ambas sedes escolares"""
     return broadcast_emergency_all(f"{title}\n{message}", target_ips=target_ips, preset="emergency" if is_emergency else "direct")
 
+def apply_recinto_overrides(plano_dict):
+    """Aplica nombres y rótulos personalizados a los recintos del plano arquitectónico"""
+    rec_overrides = DEVICE_OVERRIDES.get("recintos", {})
+    if not rec_overrides:
+        return plano_dict
+    for nivel in plano_dict.get("niveles", []):
+        for rec in nivel.get("recintos", []):
+            rid = rec.get("id")
+            if rid and rid in rec_overrides:
+                ov = rec_overrides[rid]
+                if ov.get("nombre"):
+                    rec["nombre"] = ov["nombre"]
+                if ov.get("rotulo_cad"):
+                    rec["rotulo_cad"] = ov["rotulo_cad"]
+                if ov.get("descripcion"):
+                    rec["descripcion"] = ov["descripcion"]
+    return plano_dict
+
 class NetGuardRequestHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=APP_DIR, **kwargs)
@@ -2466,12 +2540,30 @@ class NetGuardRequestHandler(SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path
 
+        # ── OVERRIDES DE DISPOSITIVOS Y RECINTOS ──
+        if path == '/api/device/overrides':
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(DEVICE_OVERRIDES).encode('utf-8'))
+            return
+
         # ── 1. ESTADO EN VIVO (QUIÉN ESTÁ CONECTADO AHORA MISMO) ──
         if path in ('/api/live-status', '/api/hosts'):
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
             
+            # Sincronizar overrides en LIVE_HOSTS_CACHE
+            for _o_ip, _o_data in DEVICE_OVERRIDES.get("devices", {}).items():
+                if _o_ip in LIVE_HOSTS_CACHE:
+                    if _o_data.get("name"):
+                        LIVE_HOSTS_CACHE[_o_ip]["name"] = _o_data["name"]
+                    if _o_data.get("schoolArea"):
+                        LIVE_HOSTS_CACHE[_o_ip]["schoolArea"] = _o_data["schoolArea"]
+                    if _o_data.get("type"):
+                        LIVE_HOSTS_CACHE[_o_ip]["type"] = _o_data["type"]
+
             online_ips = [ip for ip, data in LIVE_HOSTS_CACHE.items() if data.get("is_online")]
             lynch_alive = sum(1 for ip, d in LIVE_HOSTS_CACHE.items() if d.get("is_online") and d.get("sede") == "lynch")
             levarte_alive = sum(1 for ip, d in LIVE_HOSTS_CACHE.items() if d.get("is_online") and d.get("sede") == "levarte")
@@ -2479,12 +2571,14 @@ class NetGuardRequestHandler(SimpleHTTPRequestHandler):
                 "success": True,
                 "server_time": time.strftime("%H:%M:%S"),
                 "my_ip": MY_IP,
+                "hostname": LOCAL_HOSTNAME,
                 "current_sede": CURRENT_SEDE,
                 "total_alive_count": len(online_ips),
                 "lynch_alive_count": lynch_alive,
                 "levarte_alive_count": levarte_alive,
                 "online_ips": online_ips,
-                "hosts": LIVE_HOSTS_CACHE
+                "hosts": LIVE_HOSTS_CACHE,
+                "overrides": DEVICE_OVERRIDES
             }).encode('utf-8'))
             return
 
@@ -2936,6 +3030,7 @@ class NetGuardRequestHandler(SimpleHTTPRequestHandler):
                     }
                 ]
             }
+            plano_data = apply_recinto_overrides(plano_data)
             self.wfile.write(json.dumps(plano_data).encode('utf-8'))
             return
 
@@ -3060,6 +3155,7 @@ class NetGuardRequestHandler(SimpleHTTPRequestHandler):
                     }
                 ]
             }
+            plano_lev = apply_recinto_overrides(plano_lev)
             self.wfile.write(json.dumps(plano_lev).encode('utf-8'))
             return
 
@@ -3510,6 +3606,175 @@ class NetGuardRequestHandler(SimpleHTTPRequestHandler):
         global CURRENT_SEDE
         parsed = urlparse(self.path)
         path = parsed.path
+
+        # ── ACTUALIZACIÓN Y RENOMBRADO DE DISPOSITIVOS Y ROUTERS EN RED ──
+        if path in ('/api/device/update', '/api/device/rename'):
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length)
+            try:
+                data = json.loads(body.decode('utf-8'))
+            except Exception:
+                data = {}
+
+            ip = data.get('ip', '').strip()
+            name = data.get('name', '').strip()
+            area = data.get('schoolArea', '').strip()
+            dev_type = data.get('type', '').strip()
+            dev_sede = data.get('sede', '').strip()
+            dev_vlan = data.get('vlan')
+
+            if not ip or not name:
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "error": "IP y Nombre son requeridos"}).encode('utf-8'))
+                return
+
+            if "devices" not in DEVICE_OVERRIDES:
+                DEVICE_OVERRIDES["devices"] = {}
+
+            auto_sede = dev_sede or ("levarte" if (ip.startswith("192.168.1.") or ip.startswith("192.168.9.")) else "lynch")
+            DEVICE_OVERRIDES["devices"][ip] = {
+                "name": name,
+                "schoolArea": area,
+                "type": dev_type or "pc",
+                "sede": auto_sede,
+                "vlan": int(dev_vlan) if dev_vlan else 1,
+                "updated_at": time.strftime("%Y-%m-%d %H:%M:%S")
+            }
+            save_device_overrides()
+
+            # Sincronizar en LIVE_HOSTS_CACHE
+            if ip in LIVE_HOSTS_CACHE:
+                LIVE_HOSTS_CACHE[ip]["name"] = name
+                if area:
+                    LIVE_HOSTS_CACHE[ip]["schoolArea"] = area
+                if dev_type:
+                    LIVE_HOSTS_CACHE[ip]["type"] = dev_type
+                if dev_vlan:
+                    LIVE_HOSTS_CACHE[ip]["vlan"] = int(dev_vlan)
+            else:
+                LIVE_HOSTS_CACHE[ip] = {
+                    "ip": ip,
+                    "mac": data.get("mac", "CONFIG-MANUAL"),
+                    "name": name,
+                    "schoolArea": area,
+                    "type": dev_type or "pc",
+                    "vlan": int(dev_vlan) if dev_vlan else 1,
+                    "is_online": True,
+                    "first_seen": time.strftime("%H:%M:%S"),
+                    "last_seen": time.strftime("%H:%M:%S"),
+                    "last_timestamp": time.time(),
+                    "ping_ms": 2,
+                    "total_mb": 50.0,
+                    "rx_mb": 30.0,
+                    "tx_mb": 20.0,
+                    "packets": 5000,
+                    "activity": "🟢 Dispositivo Configurado",
+                    "sede": auto_sede
+                }
+
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                "success": True,
+                "ip": ip,
+                "device": LIVE_HOSTS_CACHE[ip],
+                "overrides": DEVICE_OVERRIDES
+            }).encode('utf-8'))
+            return
+
+        # ── DETECCIÓN ACTIVA DE NOMBRE REAL DE WINDOWS / REVERSE DNS ──
+        if path == '/api/device/detect-hostname':
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length)
+            try:
+                data = json.loads(body.decode('utf-8'))
+            except Exception:
+                data = {}
+
+            ip = data.get('ip', '').strip()
+            detected_name = None
+            detection_source = "local"
+            
+            if not ip or ip in ("127.0.0.1", "localhost", MY_IP, "192.168.80.22", "192.168.1.130"):
+                detected_name = get_local_hostname()
+                detection_source = "windows_os"
+            else:
+                try:
+                    res = socket.gethostbyaddr(ip)
+                    if res and res[0]:
+                        detected_name = res[0].split('.')[0]
+                        detection_source = "reverse_dns"
+                except Exception:
+                    pass
+
+                if not detected_name and os.name == 'nt':
+                    try:
+                        nbt_out = subprocess.run(["nbtstat", "-A", ip], capture_output=True, text=True, timeout=1.8)
+                        for line in nbt_out.stdout.splitlines():
+                            if "<00>" in line and "UNIQUE" in line.upper():
+                                parts = line.strip().split()
+                                if parts:
+                                    detected_name = parts[0].strip()
+                                    detection_source = "netbios"
+                                    break
+                    except Exception:
+                        pass
+
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                "success": bool(detected_name),
+                "ip": ip,
+                "hostname": detected_name or "Desconocido",
+                "source": detection_source
+            }).encode('utf-8'))
+            return
+
+        # ── RENOMBRADO DE SALAS / RECINTOS EN PLANO ARQUITECTÓNICO ──
+        if path == '/api/recinto/update':
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length)
+            try:
+                data = json.loads(body.decode('utf-8'))
+            except Exception:
+                data = {}
+
+            rec_id = data.get('recinto_id', '').strip()
+            nombre = data.get('nombre', '').strip()
+            rotulo = data.get('rotulo_cad', '').strip()
+            desc = data.get('descripcion', '').strip()
+
+            if not rec_id or not nombre:
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "error": "ID y Nombre de sala son requeridos"}).encode('utf-8'))
+                return
+
+            if "recintos" not in DEVICE_OVERRIDES:
+                DEVICE_OVERRIDES["recintos"] = {}
+
+            DEVICE_OVERRIDES["recintos"][rec_id] = {
+                "nombre": nombre,
+                "rotulo_cad": rotulo or nombre.upper(),
+                "descripcion": desc,
+                "updated_at": time.strftime("%Y-%m-%d %H:%M:%S")
+            }
+            save_device_overrides()
+
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                "success": True,
+                "recinto_id": rec_id,
+                "recinto": DEVICE_OVERRIDES["recintos"][rec_id]
+            }).encode('utf-8'))
+            return
 
         # ── BLOQUEO DE DOMINIOS ESCOLARES ──
         if path == '/api/web-audit/block':
