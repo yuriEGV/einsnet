@@ -695,6 +695,20 @@ for _cdev in LYNCH_CORE_DEVICES:
         "sede": "lynch"
     }
 
+ROUTER_NAME_AREAS = {
+    "192.168.80.1": "Gateway Central",
+    "192.168.3.1": "Portería / Control Acceso",
+    "192.168.80.10": "Administración Central / Rectoría",
+    "192.168.80.12": "Formación Profesional",
+    "192.168.80.13": "Laboratorio de Química",
+    "192.168.80.14": "Talleres / Gastronomía",
+    "192.168.80.15": "Taller Elaboración Industrial",
+    "192.168.80.16": "Simulador Maniobras Portuarias",
+    "192.168.80.17": "Logística Operaciones Portuarias",
+    "192.168.80.20": "Pabellón Clases Norte",
+    "192.168.80.9": "Patio Central / WiFi Alumnos",
+}
+
 for _rip, _blist in BRANCH_DEVICES.items():
     if _rip.startswith("192.168.80."):
         for _bdev in _blist:
@@ -703,7 +717,7 @@ for _rip, _blist in BRANCH_DEVICES.items():
                     "ip": _bdev["ip"],
                     "mac": _bdev["mac"],
                     "name": _bdev["name"],
-                    "schoolArea": f"Área Conectada a {_rip}",
+                    "schoolArea": ROUTER_NAME_AREAS.get(_rip, f"Subred {_rip}"),
                     "is_online": True,
                     "first_seen": "08:00:00",
                     "last_seen": time.strftime("%H:%M:%S"),

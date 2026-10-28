@@ -453,74 +453,210 @@ const canvas = $('network-map');
 const ctx = canvas.getContext('2d');
 let packets=[];
 
+// ═══════════════════════════════════════════════════════
+//  PERSISTENCIA Y DISTRIBUCIÓN ESPACIAL DEL MAPA (V2)
+// ═══════════════════════════════════════════════════════
+const MAP_POSITIONS_STORAGE_KEY = 'einsnet_topology_layout_v2';
+
+function saveUserNodePositions() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(MAP_POSITIONS_STORAGE_KEY) || '{}');
+    state.devices.forEach(d => {
+      if (d.userPinned && Number.isFinite(d.x) && Number.isFinite(d.y)) {
+        saved[d.ip] = { x: Math.round(d.x), y: Math.round(d.y), userPinned: true };
+      }
+    });
+    localStorage.setItem(MAP_POSITIONS_STORAGE_KEY, JSON.stringify(saved));
+  } catch(e) {
+    console.warn('Error saving pinned positions:', e);
+  }
+}
+
+function saveAllNodePositions() {
+  try {
+    const saved = {};
+    state.devices.forEach(d => {
+      if (Number.isFinite(d.x) && Number.isFinite(d.y) && d.x !== -9999) {
+        d.userPinned = true;
+        saved[d.ip] = { x: Math.round(d.x), y: Math.round(d.y), userPinned: true };
+      }
+    });
+    localStorage.setItem(MAP_POSITIONS_STORAGE_KEY, JSON.stringify(saved));
+  } catch(e) {
+    console.warn('Error saving all positions:', e);
+  }
+}
+
+function loadSavedNodePositions() {
+  try {
+    const raw = localStorage.getItem(MAP_POSITIONS_STORAGE_KEY);
+    if (!raw) return false;
+    const positions = JSON.parse(raw);
+    let loadedCount = 0;
+    state.devices.forEach(d => {
+      if (positions[d.ip] && Number.isFinite(positions[d.ip].x) && Number.isFinite(positions[d.ip].y)) {
+        d.x = positions[d.ip].x;
+        d.y = positions[d.ip].y;
+        d.userPinned = true;
+        loadedCount++;
+      }
+    });
+    return loadedCount > 0;
+  } catch(e) {
+    console.warn('Error loading positions:', e);
+    return false;
+  }
+}
+
+function assignPositionsToUnplacedDevices() {
+  let placedAny = false;
+  state.devices.forEach((d, idx) => {
+    // Si el equipo ya tiene posición válida en el mapa, ¡NUNCA MOVERLO!
+    if (Number.isFinite(d.x) && Number.isFinite(d.y) && (d.x !== 0 || d.y !== 0) && d.x !== -9999) {
+      return;
+    }
+
+    const devSede = getDeviceSede(d);
+    let parent = d.bridgeTo ? state.devices.find(p => p.ip === d.bridgeTo) : null;
+    let cx = canvas.width / 2, cy = canvas.height / 2;
+
+    if (state.mapSedeView === 'both') {
+      const offset = Math.max(canvas.width * 0.30, 520);
+      cx = devSede === 'levarte' ? (canvas.width / 2 - offset) : (canvas.width / 2 + offset);
+    }
+
+    if (!parent || !Number.isFinite(parent.x) || (parent.x === 0 && parent.y === 0)) {
+      parent = state.devices.find(dev => (devSede === 'levarte' ? dev.ip === '192.168.1.99' : dev.ip === '192.168.80.1'));
+    }
+
+    const px = parent && Number.isFinite(parent.x) && parent.x !== 0 ? parent.x : cx;
+    const py = parent && Number.isFinite(parent.y) && parent.y !== 0 ? parent.y : cy;
+
+    const siblings = state.devices.filter(s => s.bridgeTo === (parent ? parent.ip : null) && s !== d && Number.isFinite(s.x) && s.x !== 0);
+    const angleStep = 0.45;
+    const baseAngle = (siblings.length * angleStep + (idx * 0.22)) % (Math.PI * 2);
+    const radius = 95 + ((siblings.length % 3) * 25);
+
+    d.x = px + Math.cos(baseAngle) * radius;
+    d.y = py + Math.sin(baseAngle) * radius;
+    placedAny = true;
+  });
+
+  if (placedAny) {
+    state.connections = genConnections();
+  }
+}
+
+function drawLabelPill(ctx, text, x, y, options = {}) {
+  if (!text) return;
+  ctx.save();
+  const font = options.font || '10px Inter,sans-serif';
+  ctx.font = font;
+  const metrics = ctx.measureText(text);
+  const textWidth = metrics.width;
+  const padX = options.padX !== undefined ? options.padX : 6;
+  const padY = options.padY !== undefined ? options.padY : 2;
+  const fontSize = options.fontSize || 10;
+  const boxHeight = fontSize + padY * 2;
+  const boxWidth = textWidth + padX * 2;
+  const rx = Math.round(x - boxWidth / 2);
+  const ry = Math.round(y - boxHeight / 2);
+
+  ctx.fillStyle = options.bgColor || 'rgba(10, 16, 28, 0.90)';
+  ctx.beginPath();
+  if (typeof ctx.roundRect === 'function') {
+    ctx.roundRect(rx, ry, boxWidth, boxHeight, 4);
+  } else {
+    ctx.rect(rx, ry, boxWidth, boxHeight);
+  }
+  ctx.fill();
+
+  if (options.borderColor) {
+    ctx.strokeStyle = options.borderColor;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = options.textColor || '#e2e8f0';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, x, y);
+  ctx.restore();
+}
+
 function resizeCanvas(){
   const c=$('map-container');
   canvas.width=c.clientWidth; canvas.height=c.clientHeight;
-  if(state.devices.every(d=>d.x===0&&d.y===0)) autoLayout();
+  const hasSaved = loadSavedNodePositions();
+  if (!hasSaved && state.devices.every(d=>d.x===0&&d.y===0)) {
+    autoLayout(false);
+  } else {
+    assignPositionsToUnplacedDevices();
+  }
 }
 
-function layoutLevarteCluster(cx, cy, isBoth = false) {
+function layoutLevarteCluster(cx, cy, isBoth = false, force = false) {
   const isLive = state.mapViewMode === 'live';
   const gw = state.devices.find(d => d.ip === '192.168.1.99') || state.devices.find(d => d.type === 'router');
-  if (gw) { gw.x = cx; gw.y = cy - 20; }
+  if (gw && (force || !gw.userPinned)) { gw.x = cx; gw.y = cy - 20; }
 
   const sw = state.devices.find(d => d.ip === '192.168.1.253');
-  if (sw) { sw.x = cx; sw.y = cy + 45; }
+  if (sw && (force || !sw.userPinned)) { sw.x = cx; sw.y = cy + 45; }
 
   // Routers y Switches secundarios en posiciones cardinales
   const rWiFi = state.devices.find(d => d.ip === '192.168.9.1');
-  if (rWiFi) { rWiFi.x = cx + (isBoth ? 175 : 240); rWiFi.y = cy - 65; }
+  if (rWiFi && (force || !rWiFi.userPinned)) { rWiFi.x = cx + (isBoth ? 190 : 255); rWiFi.y = cy - 70; }
 
   const swPiso2 = state.devices.find(d => d.ip === '192.168.9.10');
-  if (swPiso2) { swPiso2.x = cx + (isBoth ? 175 : 240); swPiso2.y = cy + 115; }
+  if (swPiso2 && (force || !swPiso2.userPinned)) { swPiso2.x = cx + (isBoth ? 190 : 255); swPiso2.y = cy + 125; }
 
   const rTaller = state.devices.find(d => d.ip === '192.168.9.20');
-  if (rTaller) { rTaller.x = cx - (isBoth ? 175 : 240); rTaller.y = cy + 90; }
+  if (rTaller && (force || !rTaller.userPinned)) { rTaller.x = cx - (isBoth ? 190 : 255); rTaller.y = cy + 95; }
 
   const rBackup = state.devices.find(d => d.ip === '192.168.9.99');
-  if (rBackup) { rBackup.x = cx - (isBoth ? 175 : 240); rBackup.y = cy - 80; }
+  if (rBackup && (force || !rBackup.userPinned)) { rBackup.x = cx - (isBoth ? 190 : 255); rBackup.y = cy - 85; }
 
   // 1. Administración & Gabinete TI (Norte)
   const adminPositions = [
-    { ip: '192.168.1.130', ox: -30,  oy: -115 }, // maritimo Puesto Técnico Levarte
-    { ip: '192.168.1.111', ox: -85,  oy: -85 },  // SubDireccion
-    { ip: '192.168.1.115', ox: 85,   oy: -85 },  // Inspectoria
-    { ip: '192.168.1.118', ox: -135, oy: -45 },  // Secretaria
-    { ip: '192.168.1.162', ox: 135,  oy: -45 },  // HP PageWide 577
-    { ip: '192.168.1.201', ox: -65,  oy: -15 },  // Reloj ZKTeco
-    { ip: '192.168.1.126', ox: 65,   oy: -15 },  // Cam Hikvision
+    { ip: '192.168.1.130', ox: -30,  oy: -125 }, // maritimo Puesto Técnico Levarte
+    { ip: '192.168.1.111', ox: -95,  oy: -90 },  // SubDireccion
+    { ip: '192.168.1.115', ox: 95,   oy: -90 },  // Inspectoria
+    { ip: '192.168.1.118', ox: -145, oy: -45 },  // Secretaria
+    { ip: '192.168.1.162', ox: 145,  oy: -45 },  // HP PageWide 577
+    { ip: '192.168.1.201', ox: -70,  oy: -15 },  // Reloj ZKTeco
+    { ip: '192.168.1.126', ox: 70,   oy: -15 },  // Cam Hikvision
   ];
   adminPositions.forEach(p => {
     const d = state.devices.find(dev => dev.ip === p.ip);
-    if (d) { d.x = cx + p.ox; d.y = cy + p.oy; }
+    if (d && (force || !d.userPinned)) { d.x = cx + p.ox; d.y = cy + p.oy; }
   });
 
   // Consola Central de maritimo (Soporte TI Lynch · 192.168.80.22) enlazada al Core FortiGate
   const maritimoCentral = state.devices.find(dev => dev.ip === '192.168.80.22');
-  if (maritimoCentral) {
+  if (maritimoCentral && (force || !maritimoCentral.userPinned)) {
     maritimoCentral.x = cx + (isBoth ? 0 : 35);
-    maritimoCentral.y = cy - (isBoth ? 175 : 125);
+    maritimoCentral.y = cy - (isBoth ? 185 : 135);
     maritimoCentral.status = 'online';
   }
 
   // 2. Docentes & Coordinación (Noreste)
   const docentePositions = [
-    { ip: '192.168.1.125', ox: 105, oy: 20 },  // Coordinación Pedagógica
-    { ip: '192.168.1.119', ox: 150, oy: 15 },  // DESKTOP-GMGIG4J
-    { ip: '192.168.1.136', ox: 130, oy: 60 },  // DESKTOP-MKKKBEC (RDP)
+    { ip: '192.168.1.125', ox: 115, oy: 20 },  // Coordinación Pedagógica
+    { ip: '192.168.1.119', ox: 165, oy: 15 },  // DESKTOP-GMGIG4J
+    { ip: '192.168.1.136', ox: 140, oy: 65 },  // DESKTOP-MKKKBEC (RDP)
   ];
   docentePositions.forEach(p => {
     const d = state.devices.find(dev => dev.ip === p.ip);
-    if (d) { d.x = cx + p.ox; d.y = cy + p.oy; }
+    if (d && (force || !d.userPinned)) { d.x = cx + p.ox; d.y = cy + p.oy; }
   });
 
   // 3. Aulas 1° Medio (Sureste en arco amplio)
   const aulas1 = ['192.168.1.112', '192.168.1.114', '192.168.1.116', '192.168.1.117', '192.168.1.120'];
   aulas1.forEach((ip, idx) => {
     const d = state.devices.find(dev => dev.ip === ip);
-    if (d) {
+    if (d && (force || !d.userPinned)) {
       const a = (0.28 + idx * 0.12) * Math.PI;
-      const r = isBoth ? 150 : 205;
+      const r = isBoth ? 165 : 220;
       d.x = cx + Math.cos(a) * r;
       d.y = cy + Math.sin(a) * (r * 0.95);
     }
@@ -530,142 +666,201 @@ function layoutLevarteCluster(cx, cy, isBoth = false) {
   const aulas2 = ['192.168.1.121', '192.168.1.123', '192.168.1.124', '192.168.1.128', '192.168.1.129'];
   aulas2.forEach((ip, idx) => {
     const d = state.devices.find(dev => dev.ip === ip);
-    if (d) {
+    if (d && (force || !d.userPinned)) {
       const a = (0.72 - idx * 0.12) * Math.PI;
-      const r = isBoth ? 150 : 205;
+      const r = isBoth ? 165 : 220;
       d.x = cx + Math.cos(a) * r;
       d.y = cy + Math.sin(a) * (r * 0.95);
     }
   });
 
   // 5. Taller Bajo Nivel (satélites de rTaller 192.168.9.20)
-  const tallerP = rTaller ? { x: rTaller.x, y: rTaller.y } : { x: cx - 240, y: cy + 90 };
+  const tallerP = rTaller ? { x: rTaller.x, y: rTaller.y } : { x: cx - 255, y: cy + 95 };
   const tallerDevs = ['192.168.1.131', '192.168.1.132', '192.168.1.135', '192.168.1.137', '192.168.1.139', '192.168.1.230'];
   tallerDevs.forEach((ip, idx) => {
     const d = state.devices.find(dev => dev.ip === ip);
-    if (d) {
+    if (d && (force || !d.userPinned)) {
       const a = Math.PI * 0.85 + (idx / Math.max(tallerDevs.length - 1, 1)) * (Math.PI * 0.85);
-      const dist = isBoth ? 55 : 75;
+      const dist = isBoth ? 60 : 80;
       d.x = tallerP.x + Math.cos(a) * dist;
       d.y = tallerP.y + Math.sin(a) * dist;
     }
   });
 
   // 6. Subred 192.168.9.x satélites de rWiFi (192.168.9.1)
-  const wifiP = rWiFi ? { x: rWiFi.x, y: rWiFi.y } : { x: cx + 240, y: cy - 65 };
+  const wifiP = rWiFi ? { x: rWiFi.x, y: rWiFi.y } : { x: cx + 255, y: cy - 70 };
   const wifiDevs = [
-    { ip: '192.168.9.2',   ox: 65,  oy: -45 }, // AP Pabellón 1A
-    { ip: '192.168.9.3',   ox: 75,  oy: 0 },   // AP Pabellón 2A
-    { ip: '192.168.9.4',   ox: 60,  oy: 45 },  // AP Patio
-    { ip: '192.168.9.15',  ox: 110, oy: -35 }, // SmartTV Hall
-    { ip: '192.168.9.30',  ox: 115, oy: 15 },  // Impresora WiFi
-    { ip: '192.168.9.100', ox: 105, oy: 55 },  // Chromecast
+    { ip: '192.168.9.2',   ox: 70,  oy: -45 }, // AP Pabellón 1A
+    { ip: '192.168.9.3',   ox: 80,  oy: 0 },   // AP Pabellón 2A
+    { ip: '192.168.9.4',   ox: 65,  oy: 45 },  // AP Patio
+    { ip: '192.168.9.15',  ox: 120, oy: -35 }, // SmartTV Hall
+    { ip: '192.168.9.30',  ox: 125, oy: 15 },  // Impresora WiFi
+    { ip: '192.168.9.100', ox: 115, oy: 55 },  // Chromecast
   ];
   wifiDevs.forEach(pos => {
     const d = state.devices.find(dev => dev.ip === pos.ip);
-    if (d) { d.x = wifiP.x + (isBoth ? pos.ox * 0.8 : pos.ox); d.y = wifiP.y + (isBoth ? pos.oy * 0.8 : pos.oy); }
+    if (d && (force || !d.userPinned)) { d.x = wifiP.x + (isBoth ? pos.ox * 0.85 : pos.ox); d.y = wifiP.y + (isBoth ? pos.oy * 0.85 : pos.oy); }
   });
 
   // Satélite de AP Patio (192.168.9.4)
   const apPatio = state.devices.find(dev => dev.ip === '192.168.9.4');
   const camPatio = state.devices.find(dev => dev.ip === '192.168.9.50');
-  if (apPatio && camPatio) {
-    camPatio.x = apPatio.x + 35;
-    camPatio.y = apPatio.y + 35;
+  if (apPatio && camPatio && (force || !camPatio.userPinned)) {
+    camPatio.x = apPatio.x + 40;
+    camPatio.y = apPatio.y + 40;
   }
 
   // Satélites de Switch Piso 2 (192.168.9.10)
-  const swPiso2P = swPiso2 ? { x: swPiso2.x, y: swPiso2.y } : { x: cx + 240, y: cy + 115 };
+  const swPiso2P = swPiso2 ? { x: swPiso2.x, y: swPiso2.y } : { x: cx + 255, y: cy + 125 };
   const piso2Devs = [
-    { ip: '192.168.9.60', ox: 55, oy: -15 }, // Totem AutoConsulta
-    { ip: '192.168.9.25', ox: 65, oy: 25 },  // Laptop Móvil 1
-    { ip: '192.168.9.26', ox: 45, oy: 60 },  // Laptop Móvil 2
+    { ip: '192.168.9.60', ox: 60, oy: -15 }, // Totem AutoConsulta
+    { ip: '192.168.9.25', ox: 70, oy: 25 },  // Laptop Móvil 1
+    { ip: '192.168.9.26', ox: 50, oy: 65 },  // Laptop Móvil 2
   ];
   piso2Devs.forEach(pos => {
     const d = state.devices.find(dev => dev.ip === pos.ip);
-    if (d) { d.x = swPiso2P.x + pos.ox; d.y = swPiso2P.y + pos.oy; }
+    if (d && (force || !d.userPinned)) { d.x = swPiso2P.x + pos.ox; d.y = swPiso2P.y + pos.oy; }
   });
 }
 
-function layoutLynchCluster(cx, cy, isBoth = false) {
+function layoutLynchCluster(cx, cy, isBoth = false, force = false) {
   const isLive = state.mapViewMode === 'live';
+  const scale = isBoth ? 0.90 : 1.20;
+
+  // 1. Core FortiGate Gateway Central
   const gw = state.devices.find(d => d.ip === '192.168.80.1');
-  if (gw) { gw.x = cx; gw.y = cy; }
+  if (gw && (force || !gw.userPinned)) { gw.x = cx; gw.y = cy; }
 
-  // TIER 1: Workstations 192.168.80.x
-  const mainWorkstations = state.devices.filter(d =>
-    d.ip.startsWith('192.168.80.') &&
-    d.type !== 'router' &&
-    d.ip !== '192.168.80.1' &&
-    (!isLive || d.status === 'online')
-  );
-
-  mainWorkstations.sort((a,b) => {
-    if (a.ip === '192.168.80.22') return -1;
-    if (b.ip === '192.168.80.22') return 1;
-    if (a.ip === '192.168.80.70') return -1;
-    if (b.ip === '192.168.80.70') return 1;
-    return a.ip.localeCompare(b.ip, undefined, { numeric: true });
+  // 2. VIP Core Admin Ring (Radio amplio ~120px para nitidez total)
+  const coreVip = [
+    { ip: '192.168.80.22', ox: 0, oy: -125 * scale },           // maritimo / Informática (Admin)
+    { ip: '192.168.80.70', ox: 115 * scale, oy: -60 * scale },   // Gio
+    { ip: '192.168.80.47', ox: -115 * scale, oy: -60 * scale },  // ThinkPad Yuri
+    { ip: '192.168.80.21', ox: 105 * scale, oy: 70 * scale },    // HP Impresora Central
+    { ip: '192.168.80.64', ox: -105 * scale, oy: 70 * scale },   // Cam Hikvision CCTV Central
+  ];
+  coreVip.forEach(item => {
+    const d = state.devices.find(dev => dev.ip === item.ip);
+    if (d && (force || !d.userPinned)) {
+      d.x = cx + item.ox;
+      d.y = cy + item.oy;
+    }
   });
 
-  const rWorkX = Math.min(canvas.width * (isBoth ? 0.14 : 0.22), isBoth ? 120 : 175);
-  const rWorkY = Math.min(canvas.height * (isBoth ? 0.14 : 0.22), isBoth ? 100 : 145);
-  mainWorkstations.forEach((d, i) => {
-    const a = -Math.PI / 2 + (i / Math.max(mainWorkstations.length, 1)) * Math.PI * 2;
-    d.x = cx + Math.cos(a) * rWorkX;
-    d.y = cy + Math.sin(a) * rWorkY;
+  // 3. Departmental Routers & Switches with Dedicated Radial Sectors
+  const rDist = isBoth ? 310 : 420;
+  const deptRouters = [
+    // Operaciones Portuarias & TOS (Este - Mayor espacio porque tiene 20+ máquinas)
+    { ip: '192.168.80.17', angle: -0.05 * Math.PI, dist: rDist * 1.10 },
+    // Portería / Control Acceso (Este-Sureste)
+    { ip: '192.168.3.1',   angle: 0.18 * Math.PI,  dist: rDist * 0.95 },
+    // Patio Central / WiFi Belkin (Sureste)
+    { ip: '192.168.80.9',  angle: 0.38 * Math.PI,  dist: rDist * 0.90 },
+    // Administración Central / Rectoría (Sur)
+    { ip: '192.168.80.10', angle: 0.55 * Math.PI,  dist: rDist * 0.85 },
+    // Formación Profesional (Suroeste)
+    { ip: '192.168.80.12', angle: 0.75 * Math.PI,  dist: rDist * 0.95 },
+    // Taller Elaboración Industrial (Oeste)
+    { ip: '192.168.80.15', angle: 0.98 * Math.PI,  dist: rDist * 1.05 },
+    // Simulador Maniobras Portuarias (Oeste-Noroeste)
+    { ip: '192.168.80.16', angle: 1.22 * Math.PI,  dist: rDist * 0.95 },
+    // Laboratorio de Química / Ciencias (Noroeste)
+    { ip: '192.168.80.13', angle: 1.42 * Math.PI,  dist: rDist * 0.90 },
+    // Talleres / Gastronomía (Norte)
+    { ip: '192.168.80.14', angle: 1.62 * Math.PI,  dist: rDist * 1.08 },
+    // Pabellón de Clases Norte (Noreste)
+    { ip: '192.168.80.20', angle: 1.82 * Math.PI,  dist: rDist * 0.90 },
+  ];
+
+  deptRouters.forEach(r => {
+    const dev = state.devices.find(d => d.ip === r.ip);
+    if (dev && (force || !dev.userPinned)) {
+      dev.x = cx + Math.cos(r.angle) * r.dist;
+      dev.y = cy + Math.sin(r.angle) * (r.dist * 0.90);
+    }
   });
 
-  // TIER 2: Secondary Routers / Switches de Lynch (incluyendo switches 192.168.80.x y router 192.168.3.1 de Portería)
-  const mainRouters = state.devices.filter(d =>
-    d.type === 'router' &&
-    getDeviceSede(d) === 'lynch' &&
-    d.ip !== '192.168.80.1' &&
-    (!isLive || d.status === 'online')
-  );
-
-  mainRouters.sort((a,b) => a.ip.localeCompare(b.ip, undefined, { numeric: true }));
-
-  const rRoutX = Math.min(canvas.width * (isBoth ? 0.24 : 0.40), isBoth ? 210 : 340);
-  const rRoutY = Math.min(canvas.height * (isBoth ? 0.24 : 0.40), isBoth ? 175 : 275);
-  mainRouters.forEach((d, i) => {
-    const a = (i / Math.max(mainRouters.length, 1)) * Math.PI * 2 + (Math.PI / Math.max(mainRouters.length, 1) / 2);
-    d.x = cx + Math.cos(a) * rRoutX;
-    d.y = cy + Math.sin(a) * rRoutY;
-  });
-
-  // TIER 3: Bridge satellites (Ramas dependientes de routers/switches en Lynch)
-  const lynchRouterIps = new Set([gw?.ip, ...mainRouters.map(r => r.ip)].filter(Boolean));
-  const bridgeIps = [...new Set(state.devices.map(d => d.bridgeTo).filter(b => b && lynchRouterIps.has(b) && b !== '192.168.80.1'))];
-
-  bridgeIps.forEach(bridgeIp => {
-    const parent = state.devices.find(d => d.ip === bridgeIp);
+  // 4. Position Dependent Satellite Devices for Each Secondary Switch
+  deptRouters.forEach(r => {
+    const parent = state.devices.find(d => d.ip === r.ip);
     if (!parent) return;
+
     const children = state.devices.filter(d =>
-      d.bridgeTo === bridgeIp &&
+      d.bridgeTo === r.ip &&
       getDeviceSede(d) === 'lynch' &&
-      d.ip !== bridgeIp &&
+      d.ip !== r.ip &&
       (!isLive || d.status === 'online')
     );
     if (!children.length) return;
 
-    const baseAngle = Math.atan2(parent.y - cy, parent.x - cx);
-    const spread = Math.min(Math.PI * 0.85, Math.max(0.68, children.length * 0.22));
-    const dist = isBoth ? (children.length > 6 ? 105 : 80) : (children.length > 6 ? 165 : 120);
+    if (parent.collapsed) {
+      children.forEach(c => {
+        if (force || !c.userPinned) { c.x = parent.x; c.y = parent.y; }
+      });
+      return;
+    }
 
-    children.forEach((c, idx) => {
-      if (parent.collapsed) {
-        c.x = parent.x;
-        c.y = parent.y;
-      } else {
-        const ca = children.length === 1 ? baseAngle : (baseAngle - spread / 2 + (idx / Math.max(children.length - 1, 1)) * spread);
-        c.x = parent.x + Math.cos(ca) * dist;
-        c.y = parent.y + Math.sin(ca) * (dist * 0.88);
-      }
-    });
+    const baseAngle = Math.atan2(parent.y - cy, parent.x - cx);
+
+    // SPECIAL HANDLING FOR 192.168.80.17 (Operaciones Portuarias, 20+ devices)
+    if (r.ip === '192.168.80.17') {
+      // Split into two concentric arcs to prevent crowding
+      const tier1 = children.slice(0, 8);   // Simuladores, TOS server, Puestos clave
+      const tier2 = children.slice(8);      // Estaciones alumnos, aduanas, proyectores
+
+      const d1 = isBoth ? 100 : 135;
+      const spread1 = Math.PI * 0.65;
+      tier1.forEach((c, idx) => {
+        if (force || !c.userPinned) {
+          const a = baseAngle - spread1 / 2 + (idx / Math.max(tier1.length - 1, 1)) * spread1;
+          c.x = parent.x + Math.cos(a) * d1;
+          c.y = parent.y + Math.sin(a) * (d1 * 0.95);
+        }
+      });
+
+      const d2 = isBoth ? 190 : 250;
+      const spread2 = Math.PI * 0.85;
+      tier2.forEach((c, idx) => {
+        if (force || !c.userPinned) {
+          const a = baseAngle - spread2 / 2 + (idx / Math.max(tier2.length - 1, 1)) * spread2;
+          c.x = parent.x + Math.cos(a) * d2;
+          c.y = parent.y + Math.sin(a) * (d2 * 0.95);
+        }
+      });
+    } else {
+      // Standard department fan-out
+      const spread = Math.min(Math.PI * 0.85, Math.max(0.65, children.length * 0.24));
+      const dist = isBoth ? (children.length > 6 ? 120 : 90) : (children.length > 6 ? 165 : 120);
+      children.forEach((c, idx) => {
+        if (force || !c.userPinned) {
+          const ca = children.length === 1 ? baseAngle : (baseAngle - spread / 2 + (idx / Math.max(children.length - 1, 1)) * spread);
+          c.x = parent.x + Math.cos(ca) * dist;
+          c.y = parent.y + Math.sin(ca) * (dist * 0.90);
+        }
+      });
+    }
   });
 
-  // Safe fallback: asegurar que NINGÚN dispositivo de Lynch quede sin coordenadas (NaN / 0 / undefined)
+  // 5. Remaining General Workstations on 192.168.80.x (not attached to secondary switches)
+  const coreIps = new Set(['192.168.80.1', ...coreVip.map(v => v.ip), ...deptRouters.map(r => r.ip)]);
+  const generalWorkstations = state.devices.filter(d =>
+    getDeviceSede(d) === 'lynch' &&
+    d.type !== 'router' &&
+    !coreIps.has(d.ip) &&
+    (!d.bridgeTo || d.bridgeTo === '192.168.80.1') &&
+    (!isLive || d.status === 'online')
+  );
+
+  const rMid = isBoth ? 190 : 255;
+  generalWorkstations.forEach((d, i) => {
+    if (force || !d.userPinned) {
+      const a = (i / Math.max(generalWorkstations.length, 1)) * Math.PI * 2;
+      d.x = cx + Math.cos(a) * rMid;
+      d.y = cy + Math.sin(a) * (rMid * 0.85);
+    }
+  });
+
+  // 6. Safe fallback for any orphan node in Lynch
   state.devices.forEach((d, idx) => {
     if (getDeviceSede(d) === 'lynch') {
       if (!Number.isFinite(d.x) || !Number.isFinite(d.y) || (d.x === 0 && d.y === 0 && d.ip !== '192.168.80.1')) {
@@ -674,27 +869,31 @@ function layoutLynchCluster(cx, cy, isBoth = false) {
         const px = parent && Number.isFinite(parent.x) ? parent.x : cx;
         const py = parent && Number.isFinite(parent.y) ? parent.y : cy;
         const fallbackAngle = (idx * 0.6) % (Math.PI * 2);
-        d.x = px + Math.cos(fallbackAngle) * 75;
-        d.y = py + Math.sin(fallbackAngle) * 75;
+        d.x = px + Math.cos(fallbackAngle) * 95;
+        d.y = py + Math.sin(fallbackAngle) * 95;
       }
     }
   });
 }
 
-function autoLayout(){
+function autoLayout(force = false){
   const w = canvas.width, h = canvas.height;
   const cx = w / 2, cy = h / 2;
 
+  if (force) {
+    // Si el usuario hace clic expreso en Auto-Organizar, reseteamos el fijado manual
+    state.devices.forEach(d => { d.userPinned = false; });
+  }
+
   if (state.mapSedeView === 'both') {
-    const offset = Math.min(w * 0.28, 380);
-    layoutLevarteCluster(cx - offset, cy, true);
-    layoutLynchCluster(cx + offset, cy, true);
+    const offset = Math.max(w * 0.32, 540);
+    layoutLevarteCluster(cx - offset, cy, true, force);
+    layoutLynchCluster(cx + offset, cy, true, force);
     return;
   }
 
   if (state.mapSedeView === 'levarte') {
-    layoutLevarteCluster(cx, cy, false);
-    // Aislar totalmente: nodos de Sede Lynch fuera del plano, excepto la consola central de maritimo (192.168.80.22)
+    layoutLevarteCluster(cx, cy, false, force);
     state.devices.forEach(d => {
       if (getDeviceSede(d) !== 'levarte' && d.ip !== '192.168.80.22') {
         d.x = -9999; d.y = -9999;
@@ -704,8 +903,7 @@ function autoLayout(){
   }
 
   // Sede Lynch exclusiva
-  layoutLynchCluster(cx, cy, false);
-  // Aislar totalmente: nodos de Sede Levarte fuera del plano
+  layoutLynchCluster(cx, cy, false, force);
   state.devices.forEach(d => {
     if (getDeviceSede(d) !== 'lynch') {
       d.x = -9999; d.y = -9999;
@@ -1238,70 +1436,81 @@ function drawMap(){
     // Labels
     if(showLabels){
       if(isQuarantined){
-        ctx.save();
-        ctx.font='bold 8px "JetBrains Mono",monospace';
-        ctx.fillStyle='#f87171';
-        ctx.textAlign='center';
-        ctx.fillText('⛔ SIN INTERNET · AISLADO', d.x, d.y - r - 7);
-        ctx.restore();
+        drawLabelPill(ctx, '⛔ SIN INTERNET · AISLADO', d.x, d.y - r - 8, {
+          font: 'bold 8px monospace', fontSize: 8, textColor: '#f87171',
+          bgColor: 'rgba(239, 68, 68, 0.22)', borderColor: '#ef4444'
+        });
       }
+
       if(isMe){
-        // Dedicated prominent badge for user's computer
-        ctx.font='bold 8px Inter,sans-serif';
-        ctx.fillStyle='#f59e0b';
-        ctx.textAlign='center';
-        const topTag = (state.mapSedeView === 'levarte' && d.ip === '192.168.80.22') ? '⭐ SOPORTE TI CENTRAL (LYNCH)' : 'TU EQUIPO · ADMIN';
-        ctx.fillText(topTag, d.x, d.y - r - 6);
-
-        ctx.font='bold 10.5px "JetBrains Mono",monospace';
-        ctx.fillStyle='#fbbf24';
-        ctx.fillText(d.ip, d.x, d.y + r + 13);
-
-        ctx.font='bold 11px Inter,sans-serif';
-        ctx.fillStyle='#fef08a';
-        const displayName = d.name || 'Informatica';
-        const nameTag = (state.mapSedeView === 'levarte' && d.ip === '192.168.80.22' && !displayName.includes('Lynch')) ? `${displayName} (Lynch)` : displayName;
-        ctx.fillText(nameTag, d.x, d.y + r + 26);
+        const topTag = (state.mapSedeView === 'levarte' && d.ip === '192.168.80.22') ? '⭐ SOPORTE TI CENTRAL (LYNCH)' : '👑 TU EQUIPO · ADMIN';
+        drawLabelPill(ctx, topTag, d.x, d.y - r - 8, {
+          font: 'bold 8px Inter,sans-serif', fontSize: 8, textColor: '#f59e0b',
+          bgColor: 'rgba(245, 158, 11, 0.22)', borderColor: '#f59e0b'
+        });
+        drawLabelPill(ctx, d.ip, d.x, d.y + r + 11, {
+          font: 'bold 10px monospace', fontSize: 10, textColor: '#fbbf24',
+          bgColor: 'rgba(11, 18, 33, 0.92)', borderColor: 'rgba(245, 158, 11, 0.35)'
+        });
+        const displayName = (state.mapSedeView === 'levarte' && d.ip === '192.168.80.22' && !d.name.includes('Lynch')) ? `${d.name} (Lynch)` : (d.name || 'Informatica');
+        drawLabelPill(ctx, displayName, d.x, d.y + r + 26, {
+          font: 'bold 10.5px Inter,sans-serif', fontSize: 10.5, textColor: '#fef08a',
+          bgColor: 'rgba(11, 18, 33, 0.92)'
+        });
       } else if(isGio){
-        // Dedicated prominent badge for Gio
-        ctx.font='bold 8px Inter,sans-serif';
-        ctx.fillStyle='#06b6d4';
-        ctx.textAlign='center';
-        ctx.fillText('PUESTO GIO', d.x, d.y - r - 6);
-
-        ctx.font='bold 10.5px "JetBrains Mono",monospace';
-        ctx.fillStyle='#38bdf8';
-        ctx.fillText(d.ip, d.x, d.y + r + 13);
-
-        ctx.font='bold 11px Inter,sans-serif';
-        ctx.fillStyle='#bae6fd';
-        ctx.fillText(d.name || 'Gio', d.x, d.y + r + 26);
+        drawLabelPill(ctx, '⭐ PUESTO GIO', d.x, d.y - r - 8, {
+          font: 'bold 8px Inter,sans-serif', fontSize: 8, textColor: '#06b6d4',
+          bgColor: 'rgba(6, 182, 212, 0.22)', borderColor: '#06b6d4'
+        });
+        drawLabelPill(ctx, d.ip, d.x, d.y + r + 11, {
+          font: 'bold 10px monospace', fontSize: 10, textColor: '#38bdf8',
+          bgColor: 'rgba(11, 18, 33, 0.92)', borderColor: 'rgba(56, 189, 248, 0.35)'
+        });
+        drawLabelPill(ctx, d.name || 'Gio', d.x, d.y + r + 26, {
+          font: 'bold 10.5px Inter,sans-serif', fontSize: 10.5, textColor: '#bae6fd',
+          bgColor: 'rgba(11, 18, 33, 0.92)'
+        });
+      } else if(d.type === 'router') {
+        // Router: IP in amber pill + School area/Name in cyan pill
+        drawLabelPill(ctx, d.ip, d.x, d.y + r + 11, {
+          font: 'bold 10px monospace', fontSize: 10, textColor: '#f59e0b',
+          bgColor: 'rgba(11, 18, 33, 0.92)', borderColor: 'rgba(245, 158, 11, 0.40)'
+        });
+        const rTitle = d.schoolArea || d.name;
+        const cleanTitle = rTitle.length > 28 ? rTitle.slice(0, 26) + '…' : rTitle;
+        drawLabelPill(ctx, cleanTitle, d.x, d.y + r + 26, {
+          font: 'bold 10.5px Inter,sans-serif', fontSize: 10.5, textColor: '#00f5ff',
+          bgColor: 'rgba(11, 18, 33, 0.92)', borderColor: 'rgba(0, 245, 255, 0.25)'
+        });
       } else {
         const isOffline = d.status === 'offline';
-        ctx.textAlign = 'center';
+        // Workstation / Printer / Server
+        // Line 1: IP
+        drawLabelPill(ctx, d.ip, d.x, d.y + r + 10, {
+          font: '9.5px monospace', fontSize: 9.5,
+          textColor: isOffline ? '#64748b' : '#94a3b8',
+          bgColor: 'rgba(11, 18, 33, 0.90)'
+        });
 
-        // 1. IP
-        ctx.font = '10px "JetBrains Mono",monospace';
-        ctx.fillStyle = isOffline ? '#4b5563' : '#94a3b8';
-        ctx.fillText(d.ip, d.x, d.y + r + 13);
-
-        if (d.schoolArea) {
-          // 2. School Area (bold, prominent neon)
-          ctx.font = 'bold 11px Inter,sans-serif';
-          ctx.fillStyle = isOffline ? '#4b5563' : (d.type === 'router' ? '#00f5ff' : '#fef08a');
-          const areaLabel = d.schoolArea.length > 26 ? d.schoolArea.slice(0, 24) + '…' : d.schoolArea;
-          ctx.fillText(areaLabel, d.x, d.y + r + 27);
-
-          // 3. Technical model / code badge
-          ctx.font = '9px "JetBrains Mono",monospace';
-          ctx.fillStyle = isOffline ? '#374151' : (d.type === 'router' ? '#f59e0b' : '#38bdf8');
-          ctx.fillText(`[${d.name}]`, d.x, d.y + r + 40);
-        } else {
-          ctx.font = '10px Inter,sans-serif';
-          ctx.fillStyle = isOffline ? '#374151' : baseColor;
-          const label = d.name.length > 22 ? d.name.slice(0, 20) + '…' : d.name;
-          ctx.fillText(label, d.x, d.y + r + 26);
+        // Line 2: Descriptive name or clean human label
+        let displayLabel = d.name || d.ip;
+        if (d.schoolArea && !d.schoolArea.startsWith('Área Conectada a')) {
+          displayLabel = d.schoolArea;
         }
+        if (displayLabel.length > 24) {
+          displayLabel = displayLabel.slice(0, 22) + '…';
+        }
+
+        let textColor = '#e2e8f0';
+        if (isOffline) textColor = '#475569';
+        else if (d.type === 'printer') textColor = '#c084fc';
+        else if (d.type === 'server') textColor = '#34d399';
+
+        drawLabelPill(ctx, displayLabel, d.x, d.y + r + 24, {
+          font: '9.5px Inter,sans-serif', fontSize: 9.5,
+          textColor: textColor,
+          bgColor: 'rgba(11, 18, 33, 0.90)'
+        });
       }
     }
 
@@ -1471,6 +1680,12 @@ canvas.addEventListener('mouseup',e=>{
   const hit = state.draggingNode || findNodeAt(wx,wy);
 
   if(state.draggingNode){
+    state.draggingNode.userPinned = true;
+    if(state.draggingNode.type === 'router'){
+      const children = state.devices.filter(c => c.bridgeTo === state.draggingNode.ip);
+      children.forEach(c => { c.userPinned = true; });
+    }
+    saveUserNodePositions();
     state.draggingNode = null;
   }
 
@@ -1514,7 +1729,8 @@ canvas.addEventListener('wheel',e=>{
 $('btn-center').addEventListener('click',()=>{state.mapZoom=1;state.mapOffX=0;state.mapOffY=0;$('zoom-label').textContent='100%';});
 $('btn-zoom-in').addEventListener('click',()=>{state.mapZoom=Math.min(4,state.mapZoom+0.2);$('zoom-label').textContent=Math.round(state.mapZoom*100)+'%';});
 $('btn-zoom-out').addEventListener('click',()=>{state.mapZoom=Math.max(0.3,state.mapZoom-0.2);$('zoom-label').textContent=Math.round(state.mapZoom*100)+'%';});
-$('btn-auto-layout').addEventListener('click',()=>{autoLayout();toast('Layout automático aplicado','success');});
+$('btn-save-layout')?.addEventListener('click',()=>{saveAllNodePositions();toast('💾 Posiciones de red fijadas y guardadas. No se moverán aunque se conecten nuevos equipos','success');});
+$('btn-auto-layout')?.addEventListener('click',()=>{autoLayout(true);saveAllNodePositions();toast('⚡ Auto-Organización limpia aplicada y guardada','success');});
 $('btn-animate-toggle').addEventListener('click',function(){ state.animating=!state.animating; this.textContent=state.animating?'⏸ Pausa':'▶ Reanudar'; });
 $('btn-expand-all')?.addEventListener('click',()=>expandAllRouterBranches());
 $('btn-collapse-all')?.addEventListener('click',()=>collapseAllRouterBranches());
@@ -3654,7 +3870,7 @@ function registerDevice(devData, persist = true) {
   if (parent && parent.collapsed) {
     toggleRouterBranch(parent, false);
   } else {
-    autoLayout();
+    assignPositionsToUnplacedDevices();
   }
 
   updateHeaderStats();
@@ -3799,7 +4015,7 @@ async function syncLiveHostStatus() {
     } catch(e){}
 
     if (newlyConnected > 0 && state.mapViewMode === 'live') {
-      autoLayout();
+      assignPositionsToUnplacedDevices();
     }
     if (state.currentView === 'devices') renderDevicesTable();
   } catch (e) {
