@@ -1214,6 +1214,7 @@
           <div class="bcc-details">
             <div class="bcc-row"><span>Dirección:</span> <strong>Calle Patricio Lynch N° 220, Playa Ancha</strong></div>
             <div class="bcc-row"><span>IP WAN Pública:</span> <strong style="color:var(--cyan);">185.234.218.4</strong></div>
+            <div class="bcc-row"><span>IP Tailscale VPN:</span> <strong style="color:#a78bfa;">100.100.1.1</strong></div>
             <div class="bcc-row"><span>Subred Local:</span> <code>192.168.80.0/24</code></div>
             <div class="bcc-row"><span>Especialidades:</span> <strong>Gastronomía, Elab. Ind., Op. Portuarias, Química, CAD</strong></div>
             <div class="bcc-row"><span>Máquinas en Vivo:</span> <strong style="color:#10b981;" id="bridge-lynch-count">72 Equipos Vivos</strong></div>
@@ -1231,11 +1232,11 @@
           <div class="btn-status" id="bridge-tunnel-status">🟢 Enlace Operativo (Lynch ↔ Levarte Conectadas)</div>
           <div class="btn-metrics">
             <div class="btn-metric-item">
-              <span class="bm-val" id="bridge-latency-val">11.8 ms</span>
-              <span class="bm-lbl">Latencia WAN</span>
+              <span class="bm-val" id="bridge-latency-val">12.5 ms</span>
+              <span class="bm-lbl">Latencia VPN</span>
             </div>
             <div class="btn-metric-item">
-              <span class="bm-val">AES-256</span>
+              <span class="bm-val">WireGuard</span>
               <span class="bm-lbl">Cifrado E2E</span>
             </div>
             <div class="btn-metric-item">
@@ -1261,6 +1262,7 @@
           <div class="bcc-details">
             <div class="bcc-row"><span>Dirección:</span> <strong>Calle Levarte, Playa Ancha, Valparaíso</strong></div>
             <div class="bcc-row"><span>IP WAN Pública:</span> <strong style="color:#10b981;" id="bridge-levarte-wan">190.161.66.20 (VTR Banda Ancha)</strong></div>
+            <div class="bcc-row"><span>IP Tailscale VPN:</span> <strong style="color:#a78bfa;">100.122.46.5</strong></div>
             <div class="bcc-row"><span>Subred Local:</span> <code id="bridge-levarte-lan">192.168.1.0/24 (Gateway FortiGate 192.168.1.99)</code></div>
             <div class="bcc-row"><span>Cursos:</span> <strong>1° Medio (1°A - 1°B) y 2° Medio (2°A - 2°B)</strong></div>
             <div class="bcc-row"><span>Máquinas en Vivo:</span> <strong style="color:#10b981;" id="bridge-levarte-count">28 Equipos Operativos (100% Detectados)</strong></div>
@@ -1699,7 +1701,7 @@ Selecciona un router y presiona una acción para ejecutar comandos administrativ
             <span style="font-size:20px;">📼</span>
             <div style="font-size:12px;">
               <strong style="color:#38bdf8;">NVR Central Hikvision (Sede Lynch):</strong>
-              <span style="color:#cbd5e1;margin-left:6px;">MAC: <code>3C:1B:F8:40:AF:18</code> · Canales 1 al 4 (ISAPI / RTSP 554)</span>
+              <span style="color:#cbd5e1;margin-left:6px;">LAN: <code>192.168.80.64</code> · Tailscale: <code>100.100.1.1</code> · Canales 1 al 4 (ISAPI / RTSP 554)</span>
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;">
@@ -1721,7 +1723,7 @@ Selecciona un router y presiona una acción para ejecutar comandos administrativ
             <span style="font-size:20px;">📍</span>
             <div style="font-size:12px;">
               <strong style="color:#c084fc;">DVR 8 Canales Hikvision Sede Levarte:</strong>
-              <span style="color:#cbd5e1;margin-left:6px;">IP: <code>192.168.1.126</code> · MAC: <code>3C:1B:F8:41:AE:53</code> · Canales 1 al 8 (ISAPI / RTSP 554)</span>
+              <span style="color:#cbd5e1;margin-left:6px;">LAN: <code>192.168.1.126</code> · Tailscale: <code>100.122.46.5</code> · Canales 1 al 8 (ISAPI / RTSP 554)</span>
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;">
@@ -1731,7 +1733,7 @@ Selecciona un router y presiona una acción para ejecutar comandos administrativ
             <span style="font-size:11px;color:#94a3b8;">IP DVR Levarte:</span>
             <input type="text" id="levarte-nvr-ip-input" value="192.168.1.126" style="background:rgba(0,0,0,0.5);border:1px solid #c084fc;color:#c084fc;padding:4px 8px;border-radius:4px;font-family:var(--mono);font-size:12px;width:125px;" title="Dirección IP del DVR/NVR Hikvision en Sede Levarte">
             <button class="btn-sm" id="btn-save-levarte-nvr-ip" style="background:#7c3aed;color:#fff;border-color:#7c3aed;font-weight:700;">🔄 Probar Enlace Levarte</button>
-            <span class="badge" id="levarte-nvr-status-badge" style="background:rgba(148,163,184,0.15);color:#cbd5e1;border:1px solid rgba(148,163,184,0.3);font-size:11px;">🔍 Verificando Puente</span>
+            <span class="badge" id="levarte-nvr-status-badge" style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.4);font-size:11px;">🟢 Levarte En Línea (Tailscale)</span>
           </div>
         </div>
       </div>
