@@ -1700,18 +1700,20 @@ CAMERAS_CATALOG = {
 }
 
 CCTV_SNAPSHOT_CACHE = {}
+CCTV_LAST_VALID_FRAME = {}
+LEVARTE_NVR_HARDWARE_LOCK = threading.Lock()
+LYNCH_NVR_HARDWARE_LOCK = threading.Lock()
+_thread_local_storage = threading.local()
 
-NVR_HTTP_SESSION = None
-NVR_DIGEST_AUTH = None
-if HAS_REQUESTS:
-    try:
-        NVR_HTTP_SESSION = requests.Session()
-        _adapter = requests.adapters.HTTPAdapter(pool_connections=10, pool_maxsize=20, max_retries=1)
-        NVR_HTTP_SESSION.mount('http://', _adapter)
-        NVR_DIGEST_AUTH = HTTPDigestAuth(CAMERA_CREDS.get("user", "admin"), CAMERA_CREDS.get("password", "qwert12345/"))
-    except Exception:
-        NVR_HTTP_SESSION = None
-        NVR_DIGEST_AUTH = None
+def get_thread_nvr_session():
+    if not HAS_REQUESTS:
+        return None
+    if not hasattr(_thread_local_storage, 'session'):
+        s = requests.Session()
+        adapter = requests.adapters.HTTPAdapter(pool_connections=5, pool_maxsize=10, max_retries=1)
+        s.mount('http://', adapter)
+        _thread_local_storage.session = s
+    return _thread_local_storage.session
 
 def check_quick_tcp(ip, port, timeout=0.25):
     """Prueba ultrarrápida de puerto TCP (<250ms) sin bloqueos de requests/urllib3"""
@@ -1726,15 +1728,16 @@ def check_quick_tcp(ip, port, timeout=0.25):
 
 def fetch_real_camera_snapshot(target_key_or_ip, prefer_substream=False):
     """
-    Obtiene captura de vídeo en tiempo real directamente del NVR con latencia ultra baja (<90ms).
-    Utiliza sesión HTTP persistente Keep-Alive para eliminar sobrecarga de conexión.
+    Obtiene captura de vídeo en tiempo real directamente del NVR con latencia ultra baja.
+    Utiliza sesiones HTTP thread-local, candado de serialización por NVR físico para evitar
+    saturación del hardware embebido, y memoria compartida de 1.0s con fallback a último frame válido.
     Soporta multi-sede transparente (Lynch y Levarte).
     """
     now_t = time.time()
-    # Cache ultracorto (150ms) solo para deduplicar peticiones simultáneas, garantizando tiempo real
+    # Cache de memoria compartida (1.0s) para deduplicar peticiones simultáneas de múltiples PCs web
     if target_key_or_ip in CCTV_SNAPSHOT_CACHE:
         c_time, c_bytes, c_mime = CCTV_SNAPSHOT_CACHE[target_key_or_ip]
-        if now_t - c_time < 0.15:
+        if now_t - c_time < 1.0:
             return c_bytes, c_mime
 
     cam = CAMERAS_CATALOG.get(target_key_or_ip)
@@ -1744,6 +1747,10 @@ def fetch_real_camera_snapshot(target_key_or_ip, prefer_substream=False):
                 cam = v
                 break
     if not cam:
+        if target_key_or_ip in CCTV_LAST_VALID_FRAME:
+            lv_time, lv_bytes, lv_mime = CCTV_LAST_VALID_FRAME[target_key_or_ip]
+            if now_t - lv_time < 30.0:
+                return lv_bytes, lv_mime
         return None, None
 
     is_lynch = (cam.get("sede") == "lynch")
@@ -1752,7 +1759,6 @@ def fetch_real_camera_snapshot(target_key_or_ip, prefer_substream=False):
 
     user = CAMERA_CREDS.get("user", "admin")
     pwd = CAMERA_CREDS.get("password", "qwert12345/")
-    auth = NVR_DIGEST_AUTH if (NVR_DIGEST_AUTH and getattr(NVR_DIGEST_AUTH, 'username', None) == user and getattr(NVR_DIGEST_AUTH, 'password', None) == pwd) else HTTPDigestAuth(user, pwd)
 
     endpoints = []
     if is_lynch:
@@ -1784,6 +1790,10 @@ def fetch_real_camera_snapshot(target_key_or_ip, prefer_substream=False):
                     break
 
             if not live_host:
+                if target_key_or_ip in CCTV_LAST_VALID_FRAME:
+                    lv_time, lv_bytes, lv_mime = CCTV_LAST_VALID_FRAME[target_key_or_ip]
+                    if now_t - lv_time < 30.0:
+                        return lv_bytes, lv_mime
                 LEVARTE_OFFLINE_CACHE["global_levarte"] = now_t
                 LEVARTE_NVR_CONFIG["status"] = "standby"
                 return None, None
@@ -1795,31 +1805,64 @@ def fetch_real_camera_snapshot(target_key_or_ip, prefer_substream=False):
             else:
                 endpoints.append(f"http://{rip}:{LEVARTE_NVR_CONFIG['http_port']}/ISAPI/Streaming/channels/{ch_code}/picture")
         else:
-            # En Levarte localmente: acceso directo de ultra-baja latencia en LAN
-            endpoints.append(f"http://{lev_nvr}:{LEVARTE_NVR_CONFIG['http_port']}/ISAPI/Streaming/channels/{ch_code}/picture")
-            if prefer_substream:
-                endpoints.append(f"http://{lev_nvr}:{LEVARTE_NVR_CONFIG['http_port']}/ISAPI/Streaming/channels/{ch_num}01/picture")
+            # En Levarte localmente: acceso directo en LAN.
+            # El canal principal X01 responde en ~300ms (3x más rápido y estable que sub X02 que toma ~1100ms)
+            endpoints.append(f"http://{lev_nvr}:{LEVARTE_NVR_CONFIG['http_port']}/ISAPI/Streaming/channels/{ch_num}01/picture")
+            endpoints.append(f"http://{lev_nvr}:{LEVARTE_NVR_CONFIG['http_port']}/ISAPI/Streaming/channels/{ch_num}02/picture")
             endpoints.append(f"http://{lev_nvr}:{LEVARTE_NVR_CONFIG['http_port']}/onvif-http/snapshot?channel={ch_num}&subtype=0")
             if cam_ip and cam_ip != lev_nvr:
                 endpoints.append(f"http://{cam_ip}/ISAPI/Streaming/channels/101/picture")
                 endpoints.append(f"http://{cam_ip}/onvif-http/snapshot?channel=1&subtype=0")
 
-    session = NVR_HTTP_SESSION if NVR_HTTP_SESSION is not None else requests
-    for url in endpoints:
-        try:
-            req_auth = None if "relay=1" in url else auth
-            r = session.get(url, auth=req_auth, timeout=1.8, headers={"User-Agent": "EinsNet-CCTV/5.0"})
-            if r.status_code == 200 and len(r.content) > 500 and (r.content.startswith(b'\xff\xd8') or b'JFIF' in r.content[:30] or b'PNG' in r.content[:10]):
-                if is_lynch:
-                    NVR_CONFIG["status"] = "online"
-                else:
-                    LEVARTE_NVR_CONFIG["status"] = "online"
-                    LEVARTE_OFFLINE_CACHE.pop("global_levarte", None)
-                    LEVARTE_OFFLINE_CACHE.pop(LEVARTE_NVR_CONFIG["ip"], None)
-                CCTV_SNAPSHOT_CACHE[target_key_or_ip] = (now_t, r.content, "image/jpeg")
-                return r.content, "image/jpeg"
-        except Exception:
-            pass
+    # Serialización de hardware con candado por NVR para proteger el servidor web embebido de sobrecarga
+    hw_lock = LYNCH_NVR_HARDWARE_LOCK if is_lynch else LEVARTE_NVR_HARDWARE_LOCK
+    acquired = hw_lock.acquire(timeout=2.5)
+    if not acquired:
+        if target_key_or_ip in CCTV_LAST_VALID_FRAME:
+            lv_time, lv_bytes, lv_mime = CCTV_LAST_VALID_FRAME[target_key_or_ip]
+            if now_t - lv_time < 30.0:
+                return lv_bytes, lv_mime
+        return None, None
+
+    try:
+        # Re-verificar cache después de adquirir candado por si otro hilo acaba de actualizarla
+        now_t = time.time()
+        if target_key_or_ip in CCTV_SNAPSHOT_CACHE:
+            c_time, c_bytes, c_mime = CCTV_SNAPSHOT_CACHE[target_key_or_ip]
+            if now_t - c_time < 1.0:
+                return c_bytes, c_mime
+
+        session = get_thread_nvr_session()
+        if session is None and HAS_REQUESTS:
+            session = requests
+
+        # Instanciar HTTPDigestAuth por petición de forma aislada y thread-safe
+        auth = HTTPDigestAuth(user, pwd) if HAS_REQUESTS else None
+
+        for url in endpoints:
+            try:
+                req_auth = None if "relay=1" in url else auth
+                r = session.get(url, auth=req_auth, timeout=3.5, headers={"User-Agent": "EinsNet-CCTV/5.0"})
+                if r.status_code == 200 and len(r.content) > 500 and (r.content.startswith(b'\xff\xd8') or b'JFIF' in r.content[:30] or b'PNG' in r.content[:10]):
+                    if is_lynch:
+                        NVR_CONFIG["status"] = "online"
+                    else:
+                        LEVARTE_NVR_CONFIG["status"] = "online"
+                        LEVARTE_OFFLINE_CACHE.pop("global_levarte", None)
+                        LEVARTE_OFFLINE_CACHE.pop(LEVARTE_NVR_CONFIG["ip"], None)
+                    CCTV_SNAPSHOT_CACHE[target_key_or_ip] = (now_t, r.content, "image/jpeg")
+                    CCTV_LAST_VALID_FRAME[target_key_or_ip] = (now_t, r.content, "image/jpeg")
+                    return r.content, "image/jpeg"
+            except Exception:
+                pass
+    finally:
+        hw_lock.release()
+
+    # Si la petición física falló por saturación momentánea pero tenemos un frame reciente (<30s), servirlo
+    if target_key_or_ip in CCTV_LAST_VALID_FRAME:
+        lv_time, lv_bytes, lv_mime = CCTV_LAST_VALID_FRAME[target_key_or_ip]
+        if time.time() - lv_time < 30.0:
+            return lv_bytes, lv_mime
 
     if CURRENT_SEDE == "lynch" and not is_lynch:
         LEVARTE_OFFLINE_CACHE["global_levarte"] = now_t
@@ -2823,7 +2866,7 @@ class NetGuardRequestHandler(SimpleHTTPRequestHandler):
                 self.send_response(200)
                 self.send_header('Content-Type', mime)
                 self.send_header('Content-Length', str(len(real_bytes)))
-                self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+                self.send_header('Cache-Control', 'public, max-age=1, stale-while-revalidate=2')
                 self.end_headers()
                 self.wfile.write(real_bytes)
                 return

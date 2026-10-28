@@ -6406,6 +6406,10 @@ function stopAllCameraStreams() {
       loop.timer = null;
       loop.active = false;
       loop.inFlight = false;
+      if (loop.lastBlobUrl) {
+        URL.revokeObjectURL(loop.lastBlobUrl);
+        loop.lastBlobUrl = null;
+      }
     }
   });
 }
@@ -6427,10 +6431,11 @@ function startCameraStreamLoop(camTargetKey) {
     active: true,
     timer: null,
     inFlight: false,
-    lastLatency: 0
+    lastLatency: 0,
+    lastBlobUrl: cameraStreamLoops[camTargetKey]?.lastBlobUrl || null
   };
 
-  const runLoop = () => {
+  const runLoop = async () => {
     const loop = cameraStreamLoops[camTargetKey];
     if (!loop || !loop.active) return;
     if (camerasFpsMode === 'paused' || state.currentView !== 'cameras') {
@@ -6450,39 +6455,43 @@ function startCameraStreamLoop(camTargetKey) {
     const tStart = performance.now();
     const isSub = (camerasLayoutMode !== 'focus');
     const streamType = isSub ? 'sub' : 'main';
-    const preloader = new Image();
+    const snapUrl = `/api/cameras/snapshot?ip=${encodeURIComponent(camTargetKey)}&stream=${streamType}&t=${Date.now()}`;
 
-    preloader.onload = () => {
-      loop.inFlight = false;
+    try {
+      const resp = await fetch(snapUrl);
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const blob = await resp.blob();
+      const objUrl = URL.createObjectURL(blob);
+
+      if (currentImg && currentImg.isConnected) {
+        currentImg.src = objUrl;
+        if (loop.lastBlobUrl) {
+          const oldUrl = loop.lastBlobUrl;
+          setTimeout(() => URL.revokeObjectURL(oldUrl), 1000);
+        }
+        loop.lastBlobUrl = objUrl;
+      } else {
+        URL.revokeObjectURL(objUrl);
+      }
+
       const elapsed = Math.round(performance.now() - tStart);
       loop.lastLatency = elapsed;
-
-      // Actualización atómica en DOM sin parpadeo (Double Buffering)
-      if (currentImg && currentImg.isConnected) {
-        currentImg.src = preloader.src;
-      }
-
       updateCameraLatencyTelemetry(elapsed);
 
+      loop.inFlight = false;
       if (loop.active && camerasFpsMode !== 'paused' && state.currentView === 'cameras') {
-        const intervalDelay = camerasFpsMode === 'ultra' ? 220 : 1000;
+        const intervalDelay = camerasFpsMode === 'ultra' ? 300 : 700;
         loop.timer = setTimeout(runLoop, intervalDelay);
       }
-    };
-
-    preloader.onerror = () => {
+    } catch (err) {
       loop.inFlight = false;
       if (loop.active && camerasFpsMode !== 'paused' && state.currentView === 'cameras') {
         loop.timer = setTimeout(runLoop, 1200);
       }
-    };
-
-    preloader.src = `/api/cameras/snapshot?ip=${encodeURIComponent(camTargetKey)}&stream=${streamType}&t=${Date.now()}`;
+    }
   };
 
-  // Desfase suave (stagger) para distribuir peticiones concurrentes
-  const activeCount = Object.keys(cameraStreamLoops).length;
-  setTimeout(runLoop, (activeCount % 4) * 60);
+  runLoop();
 }
 
 async function renderCamerasDashboard() {
@@ -6619,7 +6628,7 @@ async function renderCamerasDashboard() {
 
           <!-- Live CCTV Viewport Stream -->
           <div class="cctv-viewport-box" title="Clic para alternar enfoque de cámara">
-            <img src="/api/cameras/snapshot?ip=${camTargetKey}&stream=${camerasLayoutMode === 'focus' ? 'main' : 'sub'}&t=${Date.now()}" 
+            <img src="data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 360'%3E%3Crect width='100%25' height='100%25' fill='%230b1120'/%3E%3Ctext x='50%25' y='50%25' fill='%2338bdf8' font-family='sans-serif' font-size='13' text-anchor='middle' dy='.3em'%3E📹 Conectando CCTV...%3C/text%3E%3C/svg%3E" 
                  alt="${escapeHtml(c.name)}" 
                  class="cctv-stream-img" 
                  id="${imgDomId}" />
@@ -6676,11 +6685,13 @@ async function renderCamerasDashboard() {
       `;
     }).join('');
 
-    // Iniciar bucles de streaming en vivo para las cámaras visibles
+    // Iniciar bucles de streaming en vivo de forma desfasada (staggered) para no saturar sockets ni el NVR
     stopAllCameraStreams();
-    finalCams.forEach(c => {
+    finalCams.forEach((c, idx) => {
       const camTargetKey = c.id || c.ip;
-      startCameraStreamLoop(camTargetKey);
+      setTimeout(() => {
+        startCameraStreamLoop(camTargetKey);
+      }, idx * 120);
     });
 
     // Event listeners para PTZ
