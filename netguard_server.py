@@ -2888,7 +2888,7 @@ class NetGuardRequestHandler(SimpleHTTPRequestHandler):
             target = qs.get('ip', ['cam-lynch-1'])[0]
             
             self.send_response(200)
-            self.send_header('Content-Type', 'multipart/x-mixed-replace; boundary=--frame')
+            self.send_header('Content-Type', 'multipart/x-mixed-replace; boundary=frame')
             self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
             self.send_header('Pragma', 'no-cache')
             self.send_header('Connection', 'close')
@@ -2896,7 +2896,7 @@ class NetGuardRequestHandler(SimpleHTTPRequestHandler):
             
             try:
                 while True:
-                    frame_bytes, mime = fetch_real_camera_snapshot(target, prefer_substream=True)
+                    frame_bytes, mime = fetch_real_camera_snapshot(target, prefer_substream=False)
                     if frame_bytes:
                         self.wfile.write(b"--frame\r\n")
                         self.wfile.write(b"Content-Type: image/jpeg\r\n")
@@ -2904,9 +2904,29 @@ class NetGuardRequestHandler(SimpleHTTPRequestHandler):
                         self.wfile.write(frame_bytes)
                         self.wfile.write(b"\r\n")
                         self.wfile.flush()
-                    time.sleep(0.12)
+                    time.sleep(0.10)
             except Exception:
                 pass
+            return
+
+        # ── 4.1.D LISTA DE REPRODUCCIÓN M3U PARA VLC MEDIA PLAYER (UNIVERSAL) ──
+        if path.startswith('/api/cameras/vlc.m3u'):
+            qs = parse_qs(urlparse(self.path).query)
+            target = qs.get('ip', ['cam-lynch-1'])[0]
+            cam_obj = CAMERAS_CATALOG.get(target, {})
+            cam_name = cam_obj.get('name', target)
+            host_header = self.headers.get('Host', f'127.0.0.1:{PORT}')
+            
+            m3u_content = f"#EXTM3U\r\n#EXTINF:-1,EinsNet CCTV - {cam_name}\r\nhttp://{host_header}/api/cameras/mjpeg?ip={target}\r\n"
+            m3u_bytes = m3u_content.encode('utf-8')
+            
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/x-mpegurl; charset=utf-8')
+            self.send_header('Content-Disposition', f'attachment; filename="CCTV_{target}.m3u"')
+            self.send_header('Content-Length', str(len(m3u_bytes)))
+            self.send_header('Cache-Control', 'no-cache')
+            self.end_headers()
+            self.wfile.write(m3u_bytes)
             return
 
         # ── 4.2 ESCUDO ANTIRROBO DE ACTIVOS DE RED ──

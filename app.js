@@ -6676,7 +6676,7 @@ async function renderCamerasDashboard() {
               <div style="display:flex;gap:6px;flex-wrap:wrap;">
                 <button class="btn-sm btn-cctv-snap" data-target="${camTargetKey}" style="border-color:#38bdf8;color:#38bdf8;padding:2px 8px;" title="Descargar captura pericial de imagen">📸 Snapshot</button>
                 <button class="btn-sm btn-cctv-rec" data-target="${camTargetKey}" style="border-color:#ef4444;color:#f87171;padding:2px 8px;" title="Alternar grabación en NVR">${isRec ? '⏹ Pausar' : '🔴 Grabar'}</button>
-                <button class="btn-sm btn-cctv-rtsp" data-rtsp="${c.rtsp_stream}" style="border-color:#a78bfa;color:#c084fc;padding:2px 8px;" title="Copiar enlace RTSP para VLC">▶ Copiar RTSP</button>
+                <button class="btn-sm btn-cctv-rtsp" data-target="${camTargetKey}" data-name="${escapeHtml(c.name)}" data-rtsp="${c.rtsp_stream}" style="border-color:#a78bfa;color:#c084fc;padding:2px 8px;" title="Abrir en VLC Media Player (Multi-Sede o Local)">▶ Abrir en VLC</button>
                 <a href="http://${c.ip}" target="_blank" class="btn-sm" style="border-color:var(--cyan);color:var(--cyan);text-decoration:none;padding:2px 8px;" title="Abrir Web Admin">🌐 Web</a>
               </div>
             </div>
@@ -6789,20 +6789,127 @@ async function renderCamerasDashboard() {
     container.querySelectorAll('.btn-cctv-rtsp').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const rtsp = btn.dataset.rtsp;
-        if (rtsp) {
-          navigator.clipboard.writeText(rtsp).then(() => {
-            toast(`Enlace RTSP copiado al portapapeles: ${rtsp}`, 'success');
-          }).catch(() => {
-            prompt('Enlace RTSP de la cámara (abre con VLC):', rtsp);
-          });
-        }
+        const target = btn.dataset.target;
+        const name = btn.dataset.name || target;
+        const rtsp = btn.dataset.rtsp || '';
+        showVlcStreamModal(target, name, rtsp);
       });
     });
 
   } catch (e) {
     container.innerHTML = `<div style="padding:20px;color:#ef4444;">Error en Videovigilancia: ${e.message}</div>`;
   }
+}
+
+function showVlcStreamModal(camKey, camName, rtspUrl) {
+  const oldModal = document.getElementById('vlc-stream-modal');
+  if (oldModal) oldModal.remove();
+
+  const mjpegUrl = `${window.location.protocol}//${window.location.host}/api/cameras/mjpeg?ip=${encodeURIComponent(camKey)}`;
+  const m3uUrl = `/api/cameras/vlc.m3u?ip=${encodeURIComponent(camKey)}`;
+
+  const modalHtml = `
+    <div id="vlc-stream-modal" style="position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(5px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;">
+      <div style="background:#0f172a;border:1px solid #334155;border-radius:14px;max-width:580px;width:100%;box-shadow:0 25px 50px -12px rgba(0,0,0,0.8);padding:24px;color:#f8fafc;font-family:system-ui,-apple-system,sans-serif;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;border-bottom:1px solid #1e293b;padding-bottom:12px;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <span style="font-size:26px;">🎬</span>
+            <div>
+              <h3 style="margin:0;font-size:16px;font-weight:700;color:#f1f5f9;">Reproducir en VLC Media Player</h3>
+              <p style="margin:2px 0 0;font-size:12px;color:#94a3b8;">${escapeHtml(camName)}</p>
+            </div>
+          </div>
+          <button id="close-vlc-modal-btn" style="background:transparent;border:none;color:#94a3b8;font-size:20px;cursor:pointer;padding:4px 8px;border-radius:6px;">✕</button>
+        </div>
+
+        <!-- Opción 1: M3U Directo (Recomendado) -->
+        <div style="background:#1e293b;border:1px solid #38bdf8;border-radius:10px;padding:14px;margin-bottom:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:240px;">
+              <div style="font-size:13px;font-weight:700;color:#38bdf8;display:flex;align-items:center;gap:6px;">
+                <span>⚡ Opción 1: Descargar Playlist para VLC</span>
+                <span style="background:rgba(56,189,248,0.2);color:#38bdf8;font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600;">Recomendado</span>
+              </div>
+              <div style="font-size:11.5px;color:#cbd5e1;margin-top:4px;">
+                Descarga un archivo listo para VLC. Haz doble clic y se abrirá el video en vivo de inmediato sin configurar nada.
+              </div>
+            </div>
+            <a href="${m3uUrl}" download style="background:#0284c7;color:#fff;text-decoration:none;font-size:12px;font-weight:600;padding:8px 14px;border-radius:6px;display:inline-flex;align-items:center;gap:6px;">
+              📥 Descargar .M3U
+            </a>
+          </div>
+        </div>
+
+        <!-- Opción 2: URL de Red Multi-Sede -->
+        <div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:14px;margin-bottom:12px;">
+          <div style="font-size:13px;font-weight:700;color:#a78bfa;margin-bottom:4px;">
+            🌐 Opción 2: Enlace Universal VLC (Multi-Sede)
+          </div>
+          <div style="font-size:11.5px;color:#94a3b8;margin-bottom:8px;">
+            En VLC ve a: <b>Medio ➔ Abrir ubicación de red (Ctrl + N)</b> y pega esta URL:
+          </div>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="vlc-mjpeg-input" readonly value="${mjpegUrl}" style="background:#0b1120;border:1px solid #475569;color:#e2e8f0;font-size:11.5px;padding:6px 10px;border-radius:6px;flex:1;font-family:monospace;" />
+            <button id="copy-mjpeg-btn" style="background:#475569;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;font-weight:600;">📋 Copiar</button>
+          </div>
+          <div style="font-size:10.5px;color:#34d399;margin-top:6px;">
+            ✓ Funciona desde cualquier PC de Lynch o Levarte a través del servidor EinsNet.
+          </div>
+        </div>
+
+        <!-- Opción 3: RTSP Directo LAN -->
+        <div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:14px;">
+          <div style="font-size:13px;font-weight:700;color:#94a3b8;margin-bottom:4px;">
+            🏠 Opción 3: Enlace RTSP Directo del NVR (Solo Red Local)
+          </div>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="vlc-rtsp-input" readonly value="${rtspUrl}" style="background:#0b1120;border:1px solid #334155;color:#94a3b8;font-size:11px;padding:6px 10px;border-radius:6px;flex:1;font-family:monospace;" />
+            <button id="copy-rtsp-btn" style="background:#334155;color:#cbd5e1;border:none;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;">📋 Copiar</button>
+          </div>
+          <div style="font-size:10.5px;color:#f87171;margin-top:6px;">
+            ⚠️ Solo funciona si tu PC está conectada físicamente con cable o WiFi a la red local de esa sede (192.168.1.x). Si estás en Lynch, fallará porque esa IP privada no existe en tu red local.
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;margin-top:16px;">
+          <button id="close-vlc-modal-footer-btn" style="background:#334155;color:#f8fafc;border:none;border-radius:6px;padding:8px 16px;font-size:12px;cursor:pointer;">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+  const modalEl = document.getElementById('vlc-stream-modal');
+  const close = () => modalEl.remove();
+
+  document.getElementById('close-vlc-modal-btn').addEventListener('click', close);
+  document.getElementById('close-vlc-modal-footer-btn').addEventListener('click', close);
+  modalEl.addEventListener('click', (e) => {
+    if (e.target === modalEl) close();
+  });
+
+  document.getElementById('copy-mjpeg-btn').addEventListener('click', () => {
+    navigator.clipboard.writeText(mjpegUrl).then(() => {
+      document.getElementById('copy-mjpeg-btn').textContent = '✅ Copiado!';
+      setTimeout(() => {
+        const b = document.getElementById('copy-mjpeg-btn');
+        if (b) b.textContent = '📋 Copiar';
+      }, 2000);
+      toast('Enlace Universal copiado. Pégalo en VLC (Ctrl+N)', 'success');
+    });
+  });
+
+  document.getElementById('copy-rtsp-btn').addEventListener('click', () => {
+    navigator.clipboard.writeText(rtspUrl).then(() => {
+      document.getElementById('copy-rtsp-btn').textContent = '✅ Copiado!';
+      setTimeout(() => {
+        const b = document.getElementById('copy-rtsp-btn');
+        if (b) b.textContent = '📋 Copiar';
+      }, 2000);
+      toast('Enlace RTSP local copiado', 'success');
+    });
+  });
 }
 
 function initCamerasModule() {
