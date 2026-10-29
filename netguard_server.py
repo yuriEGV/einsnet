@@ -1799,7 +1799,7 @@ def fetch_real_camera_snapshot(target_key_or_ip, prefer_substream=False):
             # Test TCP rápido priorizando Tailscale (100.122.46.5)
             live_host = None
             for chk_ip, chk_port in [(ts_srv, 8000), (lev_nvr, 80), (lan_srv, 8000), (wan_srv, 8000)]:
-                if check_quick_tcp(chk_ip, chk_port, timeout=0.3):
+                if check_quick_tcp(chk_ip, chk_port, timeout=0.6):
                     live_host = (chk_ip, chk_port)
                     break
 
