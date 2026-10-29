@@ -1726,7 +1726,15 @@ canvas.addEventListener('wheel',e=>{
 },{passive:false});
 
 // Map control buttons
-$('btn-center').addEventListener('click',()=>{state.mapZoom=1;state.mapOffX=0;state.mapOffY=0;$('zoom-label').textContent='100%';});
+$('btn-center').addEventListener('click',()=>{
+  state.mapZoom = 1;
+  state.mapOffX = 0;
+  state.mapOffY = 0;
+  $('zoom-label').textContent = '100%';
+  autoLayout(true);
+  saveAllNodePositions();
+  toast('🎯 Mapa re-centrado y organizado al 100%', 'info', 2000);
+});
 $('btn-zoom-in').addEventListener('click',()=>{state.mapZoom=Math.min(4,state.mapZoom+0.2);$('zoom-label').textContent=Math.round(state.mapZoom*100)+'%';});
 $('btn-zoom-out').addEventListener('click',()=>{state.mapZoom=Math.max(0.3,state.mapZoom-0.2);$('zoom-label').textContent=Math.round(state.mapZoom*100)+'%';});
 $('btn-save-layout')?.addEventListener('click',()=>{saveAllNodePositions();toast('💾 Posiciones de red fijadas y guardadas. No se moverán aunque se conecten nuevos equipos','success');});
