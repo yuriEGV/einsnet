@@ -268,7 +268,7 @@ function switchMapSedeView(mode) {
   state.mapOffY = 0;
   if ($('zoom-label')) $('zoom-label').textContent = '100%';
 
-  autoLayout();
+  autoLayout(true);
   updateTopologyCounters();
   updateHeaderStats();
 
@@ -494,9 +494,10 @@ function loadSavedNodePositions() {
     const positions = JSON.parse(raw);
     let loadedCount = 0;
     state.devices.forEach(d => {
-      if (positions[d.ip] && Number.isFinite(positions[d.ip].x) && Number.isFinite(positions[d.ip].y)) {
-        d.x = positions[d.ip].x;
-        d.y = positions[d.ip].y;
+      const p = positions[d.ip];
+      if (p && Number.isFinite(p.x) && Number.isFinite(p.y) && p.x !== -9999 && p.y !== -9999 && Math.abs(p.x) < 4000 && Math.abs(p.y) < 4000) {
+        d.x = p.x;
+        d.y = p.y;
         d.userPinned = true;
         loadedCount++;
       }
@@ -719,7 +720,22 @@ function layoutLevarteCluster(cx, cy, isBoth = false, force = false) {
   ];
   piso2Devs.forEach(pos => {
     const d = state.devices.find(dev => dev.ip === pos.ip);
-    if (d && (force || !d.userPinned)) { d.x = swPiso2P.x + pos.ox; d.y = swPiso2P.y + pos.oy; }
+    if (d && (force || !d.userPinned || d.x === -9999 || !Number.isFinite(d.x))) { d.x = swPiso2P.x + pos.ox; d.y = swPiso2P.y + pos.oy; }
+  });
+
+  // 7. Fallback seguro e infalible para cualquier otro equipo de Sede Levarte
+  const levarteNodes = state.devices.filter(d => getDeviceSede(d) === 'levarte');
+  levarteNodes.forEach((d, idx) => {
+    if (force || !d.userPinned || d.x === -9999 || d.y === -9999 || !Number.isFinite(d.x) || !Number.isFinite(d.y) || (d.x === 0 && d.y === 0 && d.ip !== '192.168.1.99')) {
+      let parent = d.bridgeTo ? state.devices.find(p => p.ip === d.bridgeTo) : null;
+      if (!parent || !Number.isFinite(parent.x) || parent.x === -9999) parent = gw || sw;
+      const px = parent && Number.isFinite(parent.x) && parent.x !== -9999 ? parent.x : cx;
+      const py = parent && Number.isFinite(parent.y) && parent.y !== -9999 ? parent.y : cy;
+      const a = (idx * 0.55) % (Math.PI * 2);
+      const dist = isBoth ? (95 + ((idx * 19) % 65)) : (130 + ((idx * 25) % 85));
+      d.x = px + Math.cos(a) * dist;
+      d.y = py + Math.sin(a) * (dist * 0.90);
+    }
   });
 }
 
@@ -881,9 +897,19 @@ function autoLayout(force = false){
   const cx = w / 2, cy = h / 2;
 
   if (force) {
-    // Si el usuario hace clic expreso en Auto-Organizar, reseteamos el fijado manual
-    state.devices.forEach(d => { d.userPinned = false; });
+    // Si el usuario hace clic expreso en Auto-Organizar o cambia sede, reseteamos el fijado manual y desplegamos routers
+    state.devices.forEach(d => {
+      d.userPinned = false;
+      if (d.type === 'router') d.collapsed = false;
+    });
   }
+
+  // Reparar cualquier equipo que haya quedado con coordenadas corruptas (-9999 o fuera de rango)
+  state.devices.forEach(d => {
+    if (d.x === -9999 || d.y === -9999 || !Number.isFinite(d.x) || !Number.isFinite(d.y) || Math.abs(d.x) > 4000 || Math.abs(d.y) > 4000) {
+      d.userPinned = false;
+    }
+  });
 
   if (state.mapSedeView === 'both') {
     const offset = Math.max(w * 0.32, 540);
@@ -894,21 +920,11 @@ function autoLayout(force = false){
 
   if (state.mapSedeView === 'levarte') {
     layoutLevarteCluster(cx, cy, false, force);
-    state.devices.forEach(d => {
-      if (getDeviceSede(d) !== 'levarte' && d.ip !== '192.168.80.22') {
-        d.x = -9999; d.y = -9999;
-      }
-    });
     return;
   }
 
   // Sede Lynch exclusiva
   layoutLynchCluster(cx, cy, false, force);
-  state.devices.forEach(d => {
-    if (getDeviceSede(d) !== 'lynch') {
-      d.x = -9999; d.y = -9999;
-    }
-  });
 }
 
 function isFiltered(d){
@@ -1283,6 +1299,8 @@ function drawMap(){
     }
     if (!parent || parent === d) return;
     if (parent && isFiltered(parent)) return;
+    if (!Number.isFinite(d.x) || !Number.isFinite(d.y) || d.x === -9999 || Math.abs(d.x) > 4000) return;
+    if (!Number.isFinite(parent.x) || !Number.isFinite(parent.y) || parent.x === -9999 || Math.abs(parent.x) > 4000) return;
     const isThreaten=d.threat!=='none'&&d.threat!=='low';
     const isMaritimoBridge = d.ip === '192.168.80.22' && state.mapSedeView === 'levarte';
     const g=ctx.createLinearGradient(parent.x,parent.y,d.x,d.y);
@@ -1341,6 +1359,7 @@ function drawMap(){
 
   // ── NODES ──
   visible.forEach(d=>{
+    if (!Number.isFinite(d.x) || !Number.isFinite(d.y) || d.x === -9999 || Math.abs(d.x) > 4000) return;
     const r=getNodeRadius(d);
     const isMe = d.ip === '192.168.80.22' || d.ip === '192.168.1.130';
     const isGio = d.ip === '192.168.80.70';
@@ -1731,6 +1750,7 @@ $('btn-center').addEventListener('click',()=>{
   state.mapOffX = 0;
   state.mapOffY = 0;
   $('zoom-label').textContent = '100%';
+  try { localStorage.removeItem(MAP_POSITIONS_STORAGE_KEY); } catch(e){}
   autoLayout(true);
   saveAllNodePositions();
   toast('🎯 Mapa re-centrado y organizado al 100%', 'info', 2000);
@@ -1738,7 +1758,16 @@ $('btn-center').addEventListener('click',()=>{
 $('btn-zoom-in').addEventListener('click',()=>{state.mapZoom=Math.min(4,state.mapZoom+0.2);$('zoom-label').textContent=Math.round(state.mapZoom*100)+'%';});
 $('btn-zoom-out').addEventListener('click',()=>{state.mapZoom=Math.max(0.3,state.mapZoom-0.2);$('zoom-label').textContent=Math.round(state.mapZoom*100)+'%';});
 $('btn-save-layout')?.addEventListener('click',()=>{saveAllNodePositions();toast('💾 Posiciones de red fijadas y guardadas. No se moverán aunque se conecten nuevos equipos','success');});
-$('btn-auto-layout')?.addEventListener('click',()=>{autoLayout(true);saveAllNodePositions();toast('⚡ Auto-Organización limpia aplicada y guardada','success');});
+$('btn-auto-layout')?.addEventListener('click',()=>{
+  state.mapZoom = 1;
+  state.mapOffX = 0;
+  state.mapOffY = 0;
+  $('zoom-label').textContent = '100%';
+  try { localStorage.removeItem(MAP_POSITIONS_STORAGE_KEY); } catch(e){}
+  autoLayout(true);
+  saveAllNodePositions();
+  toast('⚡ Auto-Organización limpia aplicada y guardada', 'success', 2500);
+});
 $('btn-animate-toggle').addEventListener('click',function(){ state.animating=!state.animating; this.textContent=state.animating?'⏸ Pausa':'▶ Reanudar'; });
 $('btn-expand-all')?.addEventListener('click',()=>expandAllRouterBranches());
 $('btn-collapse-all')?.addEventListener('click',()=>collapseAllRouterBranches());
